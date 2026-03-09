@@ -1,0 +1,275 @@
+@startuml
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam ArrowFontSize 10
+skinparam shadowing false
+skinparam roundcorner 12
+
+title cmp Diagrama de Navegacion - Actor Propietario
+
+' COLORES
+!define CLIENT #D6EAF8
+!define SERVER #FDEBD0
+!define FORM   #FCF3CF
+
+' =====================================================================
+' DASHBOARD
+' =====================================================================
+rectangle "DashboardController\n<<Server Page>>\n----\nindex(): Object" as DashboardCtrl SERVER
+
+rectangle "Dashboard\n<<Client Page>>\n----\nrol: text\nkpis: Object\ngraficos: Object\nvisitas: int" as Dashboard CLIENT
+
+' =====================================================================
+' VENTAS
+' =====================================================================
+rectangle "VentaController\n<<Server Page>>\n----\norigen: text\nid: int\nindex(): List\nshow(): Object\nstoreVentaContado(): void\nstoreVentaCredito(): void" as VentaCtrl SERVER
+
+rectangle "Ventas/Index\n<<Client Page>>\n----\nventas: List\nfiltro_origen: text" as VentasIndex CLIENT
+
+rectangle "Ventas/Show\n<<Client Page>>\n----\nventa: Object\ndetalles: List\ncredito: Object" as VentasShow CLIENT
+
+rectangle "NuevaVenta/Form\n<<Form>>\n----\ncliente_id: Select Element\nproductos: List\ncantidad: Input Element\ntipo_pago: Select Element\ndescuento: Input Element" as VentaForm FORM
+
+rectangle "InvoiceController\n<<Server Page>>\n----\nid: int\nshow(): Object\npdf(): PDF\nticket(): Object" as InvoiceCtrl SERVER
+
+rectangle "Ventas/Boleta\n<<Client Page>>\n----\nventa: Object\ndetalles: List" as Boleta CLIENT
+
+' =====================================================================
+' PRODUCTOS (CRUD COMPLETO)
+' =====================================================================
+rectangle "ProductoController\n<<Server Page>>\n----\nsearch: text\ncategoria_id: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void\ndeleteImage(): void" as ProductoCtrl SERVER
+
+rectangle "Productos/Index\n<<Client Page>>\n----\nproductos: List\ncategorias: List\nfilters: Object\nrol: text" as ProductosIndex CLIENT
+
+rectangle "Productos/Create\n<<Form>>\n----\nnombre: Input Element\nprecio_venta: Input Element\ncategoria_id: Select Element\nstock_actual: Input Element\nimagen: Input Element" as ProductosCreate FORM
+
+rectangle "Productos/Show\n<<Client Page>>\n----\nproducto: Object\ncategoria: Object\npromociones: List" as ProductosShow CLIENT
+
+rectangle "Productos/Edit\n<<Form>>\n----\nnombre: Input Element\nprecio_venta: Input Element\ncategoria_id: Select Element\nstock_actual: Input Element\nimagen: Input Element" as ProductosEdit FORM
+
+' =====================================================================
+' CATEGORÍAS (CRUD COMPLETO)
+' =====================================================================
+rectangle "CategoriaController\n<<Server Page>>\n----\nid: int\nsearch: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as CategoriaCtrl SERVER
+
+rectangle "Categorias/Index\n<<Client Page>>\n----\ncategorias: List\nfilters: Object" as CategoriasIndex CLIENT
+
+rectangle "Categorias/Create\n<<Form>>\n----\nnombre: Input Element\ndescripcion: Text Area Element" as CategoriasCreate FORM
+
+rectangle "Categorias/Show\n<<Client Page>>\n----\ncategoria: Object\nproductos: List" as CategoriasShow CLIENT
+
+rectangle "Categorias/Edit\n<<Form>>\n----\nnombre: Input Element\ndescripcion: Text Area Element" as CategoriasEdit FORM
+
+' =====================================================================
+' PROMOCIONES (CRUD COMPLETO)
+' =====================================================================
+rectangle "PromocionController\n<<Server Page>>\n----\nid: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as PromocionCtrl SERVER
+
+rectangle "Promociones/Index\n<<Client Page>>\n----\npromociones: List" as PromocionesIndex CLIENT
+
+rectangle "Promociones/Create\n<<Form>>\n----\nnombre: Input Element\nvalor_descuento: Input Element\nfecha_inicio: Input Element\nfecha_fin: Input Element" as PromocionesCreate FORM
+
+rectangle "Promociones/Show\n<<Client Page>>\n----\npromocion: Object\nproductos: List" as PromocionesShow CLIENT
+
+rectangle "Promociones/Edit\n<<Form>>\n----\nnombre: Input Element\nvalor_descuento: Input Element\nfecha_inicio: Input Element\nfecha_fin: Input Element" as PromocionesEdit FORM
+
+' =====================================================================
+' USUARIOS (CRUD COMPLETO)
+' =====================================================================
+rectangle "UserController\n<<Server Page>>\n----\nid: int\nbuscar: text\nrole_id: int\nestado: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void\ntoggleEstado(): void" as UserCtrl SERVER
+
+rectangle "Usuarios/Index\n<<Client Page>>\n----\nusuarios: List\nroles: List\nfilters: Object\nestadisticas: Object" as UsuariosIndex CLIENT
+
+rectangle "Usuarios/Create\n<<Form>>\n----\nnombre: Input Element\nemail: Input Element\npassword: Input Element\nrole_id: Select Element" as UsuariosCreate FORM
+
+rectangle "Usuarios/Show\n<<Client Page>>\n----\nusuario: Object\nrol: Object" as UsuariosShow CLIENT
+
+rectangle "Usuarios/Edit\n<<Form>>\n----\nnombre: Input Element\nemail: Input Element\nrole_id: Select Element\nestado: Input Element" as UsuariosEdit FORM
+
+' =====================================================================
+' MÉTODOS DE PAGO (CRUD COMPLETO)
+' =====================================================================
+rectangle "MetodoPagoController\n<<Server Page>>\n----\nid: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as MetodoPagoCtrl SERVER
+
+rectangle "MetodosPago/Index\n<<Client Page>>\n----\nmetodos: List" as MetodosPagoIndex CLIENT
+
+rectangle "MetodosPago/Create\n<<Form>>\n----\nnombre: Input Element\ndescripcion: Text Area Element\nactivo: Input Element" as MetodosPagoCreate FORM
+
+rectangle "MetodosPago/Edit\n<<Form>>\n----\nnombre: Input Element\ndescripcion: Text Area Element\nactivo: Input Element" as MetodosPagoEdit FORM
+
+' =====================================================================
+' CRÉDITOS (+ editar y eliminar)
+' =====================================================================
+rectangle "CreditoController\n<<Server Page>>\n----\nid: int\nestado: text\nsearch: text\nindex(): List\nshow(): Object\nregistrarPago(): void\nactualizarEstados(): void\nreporteMora(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as CreditoCtrl SERVER
+
+rectangle "Creditos/Index\n<<Client Page>>\n----\ncreditos: List\nindicadores: Object\nfiltros: Object\nmetodosPago: List" as CreditosIndex CLIENT
+
+rectangle "Creditos/Show\n<<Client Page>>\n----\ncredito: Object\ncuotas: List\npagos: List" as CreditosShow CLIENT
+
+rectangle "Creditos/Edit\n<<Form>>\n----\nmonto_total: Input Element\ncuotas_total: Input Element\nestado: Select Element" as CreditosEdit FORM
+
+' =====================================================================
+' PAGOS (+ editar y eliminar)
+' =====================================================================
+rectangle "PagoController\n<<Server Page>>\n----\nid: int\ncuota_id: int\nindex(): List\nshow(): Object\ncreate(): Object\nstore(): void\nbuscarCuotas(): List\nhistorialCuota(): List\nedit(): Object\nupdate(): void\ndestroy(): void" as PagoCtrl SERVER
+
+rectangle "Pagos/Index\n<<Client Page>>\n----\npagos: List\nfiltros: Object" as PagosIndex CLIENT
+
+rectangle "Pagos/Create\n<<Form>>\n----\ncliente: Input Element\ncuota_id: Select Element\nmonto: Input Element\nmetodo_pago_id: Select Element" as PagosCreate FORM
+
+rectangle "Pagos/Show\n<<Client Page>>\n----\npago: Object\ncuota: Object\nhistorial: List" as PagosShow CLIENT
+
+rectangle "Pagos/Edit\n<<Form>>\n----\nmonto: Input Element\nmetodo_pago_id: Select Element\nfecha_pago: Input Element" as PagosEdit FORM
+
+' =====================================================================
+' GESTIÓN DE PEDIDOS
+' =====================================================================
+rectangle "GestionPedidosController\n<<Server Page>>\n----\nid: int\norigen: text\nestado: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\naccion(): void" as GestionPedidosCtrl SERVER
+
+rectangle "Pedidos/Index\n<<Client Page>>\n----\npedidos: List\nfiltro_origen: text\nfiltro_estado: text" as PedidosIndex CLIENT
+
+rectangle "Pedidos/Create\n<<Form>>\n----\ncliente_id: Select Element\nproductos: List\ncantidad: Input Element\ntipo_pago: Select Element\ndireccion_entrega: Text Area Element" as PedidosCreate FORM
+
+rectangle "Pedidos/Show\n<<Client Page>>\n----\npedido: Object\ndetalles: List\ncredito: Object" as PedidosShow CLIENT
+
+rectangle "Pedidos/Edit\n<<Form>>\n----\nestado: Select Element\ndireccion_entrega: Text Area Element" as PedidosEdit FORM
+
+rectangle "PedidoOnlineController\n<<Server Page>>\n----\nid: int\nmarcarComoEnviado(): void" as PedidoOnlineCtrl SERVER
+
+' =====================================================================
+' REPORTES
+' =====================================================================
+rectangle "ReportController\n<<Server Page>>\n----\ntipo: text\nfecha_inicio: date\nfecha_fin: date\nindex(): Object\nshow(): Object\npdf(): PDF" as ReportCtrl SERVER
+
+rectangle "Reportes/Index\n<<Client Page>>\n----" as ReportesIndex CLIENT
+
+rectangle "Reportes/Show\n<<Form>>\n----\ntipo: text\nfecha_inicio: Input Element\nfecha_fin: Input Element" as ReportesShow FORM
+
+' =====================================================================
+' RELACIONES DE NAVEGACIÓN
+' =====================================================================
+
+' -- Dashboard --
+Dashboard --> DashboardCtrl : <<link>>
+DashboardCtrl --> Dashboard : <<build>>
+
+' -- Ventas --
+Dashboard --> VentaCtrl : <<link>> Ventas
+VentaCtrl --> VentasIndex : <<build>>
+VentasIndex --> VentaForm : <<link>> Nueva Venta
+VentaForm --> VentaCtrl : <<submit>> Guardar Venta
+VentaCtrl --> VentasIndex : <<redirect>>
+VentasIndex --> VentasShow : <<link>>
+VentasShow --> InvoiceCtrl : <<link>> Ver Boleta
+InvoiceCtrl --> Boleta : <<build>>
+
+' -- Productos CRUD --
+Dashboard --> ProductoCtrl : <<link>> Productos
+ProductoCtrl --> ProductosIndex : <<build>>
+ProductosIndex --> ProductosCreate : <<link>>
+ProductosCreate --> ProductoCtrl : <<submit>> Guardar
+ProductoCtrl --> ProductosIndex : <<redirect>>
+ProductosIndex --> ProductosShow : <<link>>
+ProductosShow --> ProductosEdit : <<link>>
+ProductosEdit --> ProductoCtrl : <<submit>> Actualizar
+ProductoCtrl --> ProductosShow : <<redirect>>
+ProductosShow --> ProductoCtrl : <<submit>> Eliminar
+ProductoCtrl --> ProductosIndex : <<redirect>>
+
+' -- Categorías CRUD --
+Dashboard --> CategoriaCtrl : <<link>> Categorías
+CategoriaCtrl --> CategoriasIndex : <<build>>
+CategoriasIndex --> CategoriasCreate : <<link>>
+CategoriasCreate --> CategoriaCtrl : <<submit>> Guardar
+CategoriaCtrl --> CategoriasIndex : <<redirect>>
+CategoriasIndex --> CategoriasShow : <<link>>
+CategoriasShow --> CategoriasEdit : <<link>>
+CategoriasEdit --> CategoriaCtrl : <<submit>> Actualizar
+CategoriaCtrl --> CategoriasShow : <<redirect>>
+
+' -- Promociones CRUD --
+Dashboard --> PromocionCtrl : <<link>> Promociones
+PromocionCtrl --> PromocionesIndex : <<build>>
+PromocionesIndex --> PromocionesCreate : <<link>>
+PromocionesCreate --> PromocionCtrl : <<submit>> Guardar
+PromocionCtrl --> PromocionesIndex : <<redirect>>
+PromocionesIndex --> PromocionesShow : <<link>>
+PromocionesShow --> PromocionesEdit : <<link>>
+PromocionesEdit --> PromocionCtrl : <<submit>> Actualizar
+PromocionCtrl --> PromocionesShow : <<redirect>>
+
+' -- Usuarios CRUD --
+Dashboard --> UserCtrl : <<link>> Usuarios
+UserCtrl --> UsuariosIndex : <<build>>
+UsuariosIndex --> UsuariosCreate : <<link>>
+UsuariosCreate --> UserCtrl : <<submit>> Guardar
+UserCtrl --> UsuariosIndex : <<redirect>>
+UsuariosIndex --> UsuariosShow : <<link>>
+UsuariosShow --> UsuariosEdit : <<link>>
+UsuariosEdit --> UserCtrl : <<submit>> Actualizar
+UserCtrl --> UsuariosShow : <<redirect>>
+UsuariosShow --> UserCtrl : <<submit>> Toggle Estado
+UserCtrl --> UsuariosShow : <<redirect>>
+
+' -- Métodos de Pago CRUD --
+Dashboard --> MetodoPagoCtrl : <<link>> Métodos de Pago
+MetodoPagoCtrl --> MetodosPagoIndex : <<build>>
+MetodosPagoIndex --> MetodosPagoCreate : <<link>>
+MetodosPagoCreate --> MetodoPagoCtrl : <<submit>> Guardar
+MetodoPagoCtrl --> MetodosPagoIndex : <<redirect>>
+MetodosPagoIndex --> MetodosPagoEdit : <<link>>
+MetodosPagoEdit --> MetodoPagoCtrl : <<submit>> Actualizar
+MetodoPagoCtrl --> MetodosPagoIndex : <<redirect>>
+
+' -- Créditos --
+Dashboard --> CreditoCtrl : <<link>> Créditos
+CreditoCtrl --> CreditosIndex : <<build>>
+CreditosIndex --> CreditosShow : <<link>>
+CreditosShow --> CreditoCtrl : <<submit>> Registrar Pago
+CreditoCtrl --> CreditosShow : <<redirect>>
+CreditosShow --> CreditosEdit : <<link>>
+CreditosEdit --> CreditoCtrl : <<submit>> Actualizar
+CreditoCtrl --> CreditosShow : <<redirect>>
+CreditosShow --> CreditoCtrl : <<submit>> Eliminar
+CreditoCtrl --> CreditosIndex : <<redirect>>
+
+' -- Pagos --
+Dashboard --> PagoCtrl : <<link>> Pagos
+PagoCtrl --> PagosIndex : <<build>>
+PagosIndex --> PagosCreate : <<link>>
+PagosCreate --> PagoCtrl : <<submit>> Guardar Pago
+PagoCtrl --> PagosIndex : <<redirect>>
+PagosIndex --> PagosShow : <<link>>
+PagosShow --> PagosEdit : <<link>>
+PagosEdit --> PagoCtrl : <<submit>> Actualizar
+PagoCtrl --> PagosShow : <<redirect>>
+
+' -- Gestión Pedidos --
+Dashboard --> GestionPedidosCtrl : <<link>> Gestión Pedidos
+GestionPedidosCtrl --> PedidosIndex : <<build>>
+PedidosIndex --> PedidosCreate : <<link>>
+PedidosCreate --> GestionPedidosCtrl : <<submit>> Guardar Pedido
+GestionPedidosCtrl --> PedidosIndex : <<redirect>>
+PedidosIndex --> PedidosShow : <<link>>
+PedidosShow --> PedidosEdit : <<link>>
+PedidosEdit --> GestionPedidosCtrl : <<submit>> Actualizar
+GestionPedidosCtrl --> PedidosShow : <<redirect>>
+PedidosShow --> PedidoOnlineCtrl : <<submit>> Marcar Enviado
+PedidoOnlineCtrl --> PedidosShow : <<redirect>>
+
+' -- Reportes --
+Dashboard --> ReportCtrl : <<link>> Reportes
+ReportCtrl --> ReportesIndex : <<build>>
+ReportesIndex --> ReportesShow : <<link>>
+ReportesShow --> ReportCtrl : <<submit>> Generar
+ReportCtrl --> ReportesShow : <<build>>
+
+legend bottom right
+|= Tipo           |= Significado                                  |
+|<back:#D6EAF8> Client Page </back>| Vista que ve el usuario en el navegador   |
+|<back:#FDEBD0> Server Page </back>| Controlador o proceso ejecutado en servidor |
+|<back:#FCF3CF> Form        </back>| Pantalla o sección de captura de datos    |
+endlegend
+
+@enduml

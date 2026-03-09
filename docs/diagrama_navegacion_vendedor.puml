@@ -1,0 +1,173 @@
+@startuml
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam ArrowFontSize 10
+skinparam shadowing false
+skinparam roundcorner 12
+
+title cmp Diagrama de Navegacion - Actor Vendedor
+
+' COLORES
+!define CLIENT #D6EAF8
+!define SERVER #FDEBD0
+!define FORM   #FCF3CF
+
+' =====================================================================
+' DASHBOARD
+' =====================================================================
+rectangle "DashboardController\n<<Server Page>>\n----\nindex(): Object" as DashboardCtrl SERVER
+
+rectangle "Dashboard\n<<Client Page>>\n----\nrol: text\nkpis: Object\ngraficos: Object\nvisitas: int" as Dashboard CLIENT
+
+' =====================================================================
+' VENTAS
+' =====================================================================
+rectangle "VentaController\n<<Server Page>>\n----\norigen: text\nid: int\nindex(): List\nshow(): Object\nstoreVentaContado(): void\nstoreVentaCredito(): void" as VentaCtrl SERVER
+
+rectangle "Ventas/Index\n<<Client Page>>\n----\nventas: List\nfiltro_origen: text" as VentasIndex CLIENT
+
+rectangle "Ventas/Show\n<<Client Page>>\n----\nventa: Object\ndetalles: List\ncredito: Object" as VentasShow CLIENT
+
+rectangle "NuevaVenta/Form\n<<Form>>\n----\ncliente_id: Select Element\nproductos: List\ncantidad: Input Element\ntipo_pago: Select Element\ndescuento: Input Element" as VentaForm FORM
+
+' =====================================================================
+' BOLETAS / FACTURAS
+' =====================================================================
+rectangle "InvoiceController\n<<Server Page>>\n----\nid: int\nshow(): Object\npdf(): PDF\nticket(): Object" as InvoiceCtrl SERVER
+
+rectangle "Ventas/Boleta\n<<Client Page>>\n----\nventa: Object\ndetalles: List" as Boleta CLIENT
+
+' =====================================================================
+' GESTIÓN DE PEDIDOS
+' =====================================================================
+rectangle "GestionPedidosController\n<<Server Page>>\n----\nid: int\norigen: text\nestado: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\naccion(): void" as GestionPedidosCtrl SERVER
+
+rectangle "Pedidos/Index\n<<Client Page>>\n----\npedidos: List\nfiltro_origen: text\nfiltro_estado: text" as PedidosIndex CLIENT
+
+rectangle "Pedidos/Create\n<<Form>>\n----\ncliente_id: Select Element\nproductos: List\ncantidad: Input Element\ntipo_pago: Select Element\ndireccion_entrega: Text Area Element" as PedidosCreate FORM
+
+rectangle "Pedidos/Show\n<<Client Page>>\n----\npedido: Object\ndetalles: List\ncredito: Object" as PedidosShow CLIENT
+
+rectangle "Pedidos/Edit\n<<Form>>\n----\nestado: Select Element\ndireccion_entrega: Text Area Element" as PedidosEdit FORM
+
+rectangle "PedidoOnlineController\n<<Server Page>>\n----\nid: int\nmarcarComoEnviado(): void" as PedidoOnlineCtrl SERVER
+
+' =====================================================================
+' REPORTES
+' =====================================================================
+rectangle "ReportController\n<<Server Page>>\n----\ntipo: text\nfecha_inicio: date\nfecha_fin: date\nindex(): Object\nshow(): Object\npdf(): PDF" as ReportCtrl SERVER
+
+rectangle "Reportes/Index\n<<Client Page>>\n----" as ReportesIndex CLIENT
+
+rectangle "Reportes/Show\n<<Form>>\n----\ntipo: text\nfecha_inicio: Input Element\nfecha_fin: Input Element" as ReportesShow FORM
+
+' =====================================================================
+' CRÉDITOS (solo lectura + registrar pago)
+' =====================================================================
+rectangle "CreditoController\n<<Server Page>>\n----\nid: int\nestado: text\nsearch: text\nindex(): List\nshow(): Object\nregistrarPago(): void\nactualizarEstados(): void\nreporteMora(): Object" as CreditoCtrl SERVER
+
+rectangle "Creditos/Index\n<<Client Page>>\n----\ncreditos: List\nindicadores: Object\nfiltros: Object\nmetodosPago: List" as CreditosIndex CLIENT
+
+rectangle "Creditos/Show\n<<Client Page>>\n----\ncredito: Object\ncuotas: List\npagos: List" as CreditosShow CLIENT
+
+' =====================================================================
+' PAGOS (crear y ver)
+' =====================================================================
+rectangle "PagoController\n<<Server Page>>\n----\nid: int\ncuota_id: int\nindex(): List\nshow(): Object\ncreate(): Object\nstore(): void\nbuscarCuotas(): List\nhistorialCuota(): List" as PagoCtrl SERVER
+
+rectangle "Pagos/Index\n<<Client Page>>\n----\npagos: List\nfiltros: Object" as PagosIndex CLIENT
+
+rectangle "Pagos/Create\n<<Form>>\n----\ncliente: Input Element\ncuota_id: Select Element\nmonto: Input Element\nmetodo_pago_id: Select Element" as PagosCreate FORM
+
+rectangle "Pagos/Show\n<<Client Page>>\n----\npago: Object\ncuota: Object\nhistorial: List" as PagosShow CLIENT
+
+' =====================================================================
+' PRODUCTOS (solo lectura)
+' =====================================================================
+rectangle "ProductoController\n<<Server Page>>\n----\nsearch: text\ncategoria_id: int\nindex(): List\nshow(): Object" as ProductoCtrl SERVER
+
+rectangle "Productos/Index\n<<Client Page>>\n----\nproductos: List\ncategorias: List\nfilters: Object\nrol: text" as ProductosIndex CLIENT
+
+rectangle "Productos/Show\n<<Client Page>>\n----\nproducto: Object\ncategoria: Object\npromociones: List" as ProductosShow CLIENT
+
+' =====================================================================
+' PROMOCIONES (solo lectura)
+' =====================================================================
+rectangle "PromocionController\n<<Server Page>>\n----\nid: int\nindex(): List\nshow(): Object" as PromocionCtrl SERVER
+
+rectangle "Promociones/Index\n<<Client Page>>\n----\npromociones: List" as PromocionesIndex CLIENT
+
+rectangle "Promociones/Show\n<<Client Page>>\n----\npromocion: Object\nproductos: List" as PromocionesShow CLIENT
+
+' =====================================================================
+' RELACIONES DE NAVEGACIÓN
+' =====================================================================
+
+' -- Dashboard --
+Dashboard --> DashboardCtrl : <<link>>
+DashboardCtrl --> Dashboard : <<build>>
+
+' -- Ventas --
+Dashboard --> VentaCtrl : <<link>> Ventas
+VentaCtrl --> VentasIndex : <<build>>
+VentasIndex --> VentaForm : <<link>> Nueva Venta
+VentaForm --> VentaCtrl : <<submit>> Guardar Venta
+VentaCtrl --> VentasIndex : <<redirect>>
+VentasIndex --> VentasShow : <<link>>
+VentasShow --> InvoiceCtrl : <<link>> Ver Boleta
+InvoiceCtrl --> Boleta : <<build>>
+
+' -- Gestión Pedidos --
+Dashboard --> GestionPedidosCtrl : <<link>> Gestión Pedidos
+GestionPedidosCtrl --> PedidosIndex : <<build>>
+PedidosIndex --> PedidosCreate : <<link>>
+PedidosCreate --> GestionPedidosCtrl : <<submit>> Guardar Pedido
+GestionPedidosCtrl --> PedidosIndex : <<redirect>>
+PedidosIndex --> PedidosShow : <<link>>
+PedidosShow --> PedidosEdit : <<link>>
+PedidosEdit --> GestionPedidosCtrl : <<submit>> Actualizar
+GestionPedidosCtrl --> PedidosShow : <<redirect>>
+PedidosShow --> PedidoOnlineCtrl : <<submit>> Marcar Enviado
+PedidoOnlineCtrl --> PedidosShow : <<redirect>>
+
+' -- Reportes --
+Dashboard --> ReportCtrl : <<link>> Reportes
+ReportCtrl --> ReportesIndex : <<build>>
+ReportesIndex --> ReportesShow : <<link>>
+ReportesShow --> ReportCtrl : <<submit>> Generar
+ReportCtrl --> ReportesShow : <<build>>
+
+' -- Créditos --
+Dashboard --> CreditoCtrl : <<link>> Créditos
+CreditoCtrl --> CreditosIndex : <<build>>
+CreditosIndex --> CreditosShow : <<link>>
+CreditosShow --> CreditoCtrl : <<submit>> Registrar Pago
+CreditoCtrl --> CreditosShow : <<redirect>>
+
+' -- Pagos --
+Dashboard --> PagoCtrl : <<link>> Pagos
+PagoCtrl --> PagosIndex : <<build>>
+PagosIndex --> PagosCreate : <<link>>
+PagosCreate --> PagoCtrl : <<submit>> Guardar Pago
+PagoCtrl --> PagosIndex : <<redirect>>
+PagosIndex --> PagosShow : <<link>>
+
+' -- Productos (lectura) --
+Dashboard --> ProductoCtrl : <<link>> Productos
+ProductoCtrl --> ProductosIndex : <<build>>
+ProductosIndex --> ProductosShow : <<link>>
+
+' -- Promociones (lectura) --
+Dashboard --> PromocionCtrl : <<link>> Promociones
+PromocionCtrl --> PromocionesIndex : <<build>>
+PromocionesIndex --> PromocionesShow : <<link>>
+
+legend bottom right
+|= Tipo           |= Significado                                  |
+|<back:#D6EAF8> Client Page </back>| Vista que ve el usuario en el navegador   |
+|<back:#FDEBD0> Server Page </back>| Controlador o proceso ejecutado en servidor |
+|<back:#FCF3CF> Form        </back>| Pantalla o sección de captura de datos    |
+endlegend
+
+@enduml

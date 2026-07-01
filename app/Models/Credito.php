@@ -77,6 +77,76 @@ class Credito extends Model
         return $this->cuotas()->where('estado', 'pendiente')->count();
     }
 
+    public function sincronizarEstado(): void
+    {
+        // Primero: asegurar que cada cuota refleje correctamente la suma de sus pagos
+        foreach ($this->cuotas as $cuota) {
+            // Sumar pagos considerados efectivos (completados o sin estado)
+            $pagosQuery = $cuota->pagos()->where(function ($q) {
+                $q->where('pago_facil_status', 'completed')
+                  ->orWhereNull('pago_facil_status');
+            });
+
+            $montoPagado = (float) $pagosQuery->sum('monto');
+            $mora = $cuota->mora ?? 0;
+
+            $cuota->monto_pagado = $montoPagado;
+            $cuota->monto_pendiente = max(0, ($cuota->monto + $mora) - $montoPagado);
+            if ($cuota->monto_pendiente <= 0.01) {
+                $cuota->estado = 'pagada';
+                $cuota->monto_pendiente = 0;
+            }
+
+            // Guardar solo si hay cambios para evitar overhead
+            if ($cuota->isDirty(['monto_pagado', 'monto_pendiente', 'estado'])) {
+                $cuota->save();
+            }
+        }
+
+        // Recalcular totales del crédito a partir de las cuotas actualizadas
+        $cuotasQuery = $this->cuotas();
+        $this->monto_pagado = (float) $cuotasQuery->sum('monto_pagado');
+        $this->monto_pendiente = (float) $cuotasQuery->sum('monto_pendiente');
+
+        $cuotasPendientes = (clone $cuotasQuery)->whereIn('estado', ['pendiente', 'vencida'])->count();
+        $cuotasVencidas = (clone $cuotasQuery)->where('estado', 'vencida')->count();
+
+        if ($cuotasPendientes === 0 && $this->monto_pendiente <= 0.01) {
+            $this->estado = 'pagado';
+            $this->monto_pendiente = 0;
+            $this->dias_mora = 0;
+        } elseif ($cuotasVencidas > 0) {
+            $this->estado = 'vencido';
+        } else {
+            $this->estado = 'pendiente';
+        }
+
+        $this->save();
+    }
+
+    /**
+     * Sincroniza en lote los créditos para asegurar que su estado y montos
+     * reflejen el estado actual de sus cuotas.
+     *
+     * @param bool $onlyPendientes Si true, sincroniza solo créditos con estado 'pendiente' o 'vencido'.
+     *                             Si false, sincroniza todos los créditos.
+     * @return void
+     */
+    public static function sincronizarTodos(bool $onlyPendientes = true): void
+    {
+        $query = static::with('cuotas');
+
+        if ($onlyPendientes) {
+            $query->whereIn('estado', ['pendiente', 'vencido']);
+        }
+
+        $query->chunkById(50, function ($creditos) {
+            foreach ($creditos as $credito) {
+                $credito->sincronizarEstado();
+            }
+        });
+    }
+
     // Relaciones
     public function venta()
     {

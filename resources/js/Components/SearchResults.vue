@@ -1,117 +1,153 @@
 <template>
     <div
-        class="search-results position-absolute top-100 start-0 w-100 mt-2 card shadow-lg"
-        style="z-index: 1050; max-height: 500px; overflow-y: auto"
+        class="search-results absolute left-0 top-full z-[1050] mt-2 w-full max-h-[360px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[440px]"
         role="dialog"
         aria-label="Resultados de búsqueda"
     >
-        <div class="card-body p-0">
-            <!-- Header con contador de resultados -->
-            <div class="px-3 py-2 border-bottom bg-light">
-                <small class="text-muted">
-                    <i class="bi bi-search me-1"></i>
-                    Se encontraron <strong>{{ productos.length + promociones.length + menus.length }}</strong> resultado(s)
+        <div class="divide-y divide-slate-200">
+            <div class="bg-slate-50 px-3 py-2">
+                <small class="flex items-center text-xs text-slate-500">
+                    <i class="bi bi-search mr-1"></i>
+                    Se encontraron
+                    <strong class="mx-1 text-slate-700">
+                        {{
+                            productos.length + promociones.length + menus.length
+                        }}
+                    </strong>
+                    resultado(s)
                 </small>
             </div>
 
-            <!-- Menús / Navegación -->
-            <div v-if="menus.length > 0" class="border-bottom">
-                <h6 class="px-3 pt-3 pb-2 mb-0 text-muted small fw-bold">
-                    <i class="bi bi-compass me-2"></i>Navegación ({{ menus.length }})
+            <div v-if="menus.length > 0" class="border-b border-slate-200">
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-compass text-sm"></i>Navegación ({{
+                        menus.length
+                    }})
                 </h6>
-                <div class="list-group list-group-flush">
+                <div class="divide-y divide-slate-100">
                     <button
                         v-for="menu in menus"
                         :key="menu.id"
-                        class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                        class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
                         @click="navigateTo('menus', menu.route)"
                         :title="`Ir a ${menu.label}`"
                     >
-                        <div class="flex-shrink-0 me-3">
+                        <div class="shrink-0">
                             <div
-                                class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
-                                style="width: 40px; height: 40px"
+                                class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
                             >
-                                <i
-                                    :class="['bi', menu.icon, 'text-primary']"
-                                    style="font-size: 1.2rem"
-                                ></i>
+                                <i :class="['bi', menu.icon, 'text-base']"></i>
                             </div>
                         </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0">{{ menu.label }}</h6>
-                            <small v-if="menu.parent" class="text-muted">
-                                <i class="bi bi-arrow-return-right me-1"></i>{{ menu.parent }}
+                        <div class="min-w-0 flex-1">
+                            <h6
+                                class="truncate text-sm font-semibold text-slate-800"
+                            >
+                                {{ menu.label }}
+                            </h6>
+                            <small
+                                v-if="menu.parent"
+                                class="mt-0.5 flex items-center text-[11px] text-slate-500"
+                            >
+                                <i class="bi bi-arrow-return-right mr-1"></i>
+                                {{ menu.parent }}
                             </small>
-                            <small v-else-if="menu.submenus && menu.submenus.length > 0" class="text-muted">
-                                {{ menu.submenus.length }} {{ menu.submenus.length === 1 ? 'opción' : 'opciones' }}
+                            <small
+                                v-else-if="
+                                    menu.submenus && menu.submenus.length > 0
+                                "
+                                class="mt-0.5 text-[11px] text-slate-500"
+                            >
+                                {{ menu.submenus.length }}
+                                {{
+                                    menu.submenus.length === 1
+                                        ? "opción"
+                                        : "opciones"
+                                }}
                             </small>
                         </div>
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-chevron-right text-muted"></i>
+                        <div class="shrink-0 text-slate-400">
+                            <i class="bi bi-chevron-right"></i>
                         </div>
                     </button>
                 </div>
             </div>
 
-            <!-- Productos -->
-            <div v-if="productos.length > 0" class="border-bottom">
-                <h6 class="px-3 pt-3 pb-2 mb-0 text-muted small fw-bold">
-                    <i class="bi bi-box-seam me-2"></i>Productos ({{ productos.length }})
+            <div v-if="productos.length > 0" class="border-b border-slate-200">
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-box-seam text-sm"></i>Productos ({{
+                        productos.length
+                    }})
                 </h6>
-                <div class="list-group list-group-flush">
+                <div class="divide-y divide-slate-100">
                     <button
                         v-for="producto in productos"
                         :key="producto.id"
-                        class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                        @click="navigateTo('productos', producto.id)"
+                        class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
+                        @click="navigateToProducto(producto)"
                         :title="`Ver detalles de ${producto.nombre}`"
                     >
-                        <div class="flex-shrink-0 me-3">
+                        <div class="shrink-0">
                             <div
-                                class="rounded bg-light d-flex align-items-center justify-content-center"
-                                style="width: 50px; height: 50px"
+                                class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-slate-100"
                             >
                                 <i
-                                    v-if="!producto.imagen"
-                                    class="bi bi-image text-muted"
-                                    style="font-size: 1.5rem"
+                                    v-if="!getImageUrl(producto)"
+                                    class="bi bi-image text-lg text-slate-400"
                                 ></i>
                                 <img
                                     v-else
-                                    :src="producto.imagen"
+                                    :src="getImageUrl(producto)"
                                     :alt="producto.nombre"
-                                    class="rounded"
-                                    style="
-                                        width: 50px;
-                                        height: 50px;
-                                        object-fit: cover;
-                                    "
+                                    class="h-10 w-10 rounded-lg object-cover"
+                                    loading="lazy"
                                 />
                             </div>
                         </div>
-                        <div class="flex-grow-1">
-                            <div
-                                class="d-flex justify-content-between align-items-start"
-                            >
-                                <div class="flex-grow-1 me-2">
-                                    <h6 class="mb-1">{{ producto.nombre }}</h6>
-                                    <div class="small text-muted">
-                                        <i class="bi bi-tag me-1"></i>{{ producto.categoria }}
-                                        <span class="mx-1">•</span>
-                                        <i class="bi bi-upc me-1"></i>{{ producto.codigo }}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h6
+                                        class="truncate text-sm font-semibold text-slate-800"
+                                    >
+                                        {{ producto.nombre }}
+                                    </h6>
+                                    <div
+                                        class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-slate-500"
+                                    >
+                                        <i class="bi bi-tag"></i>
+                                        {{ producto.categoria }}
+                                        <span class="mx-1 text-slate-300"
+                                            >•</span
+                                        >
+                                        <i class="bi bi-upc"></i>
+                                        {{ producto.codigo }}
                                     </div>
                                 </div>
-                                <div class="text-end flex-shrink-0">
-                                    <strong class="text-success d-block"
-                                        >Bs. {{ formatMoney(producto.precio) }}</strong
+                                <div class="shrink-0 text-right">
+                                    <strong
+                                        class="block text-xs font-bold text-emerald-600"
                                     >
-                                    <small 
-                                        class="text-muted"
-                                        :class="{ 'text-danger': producto.stock <= 5 }"
+                                        Bs. {{ formatMoney(producto.precio) }}
+                                    </strong>
+                                    <small
+                                        class="mt-0.5 block text-[11px] text-slate-500"
+                                        :class="{
+                                            'text-rose-600':
+                                                producto.stock <= 5,
+                                        }"
                                     >
-                                        <i class="bi bi-box me-1"></i>{{ producto.stock }} 
-                                        {{ producto.stock === 1 ? 'unidad' : 'unidades' }}
+                                        <i class="bi bi-box mr-1"></i>
+                                        {{ producto.stock }}
+                                        {{
+                                            producto.stock === 1
+                                                ? "unidad"
+                                                : "unidades"
+                                        }}
                                     </small>
                                 </div>
                             </div>
@@ -120,53 +156,282 @@
                 </div>
             </div>
 
-            <!-- Promociones -->
-            <div v-if="promociones.length > 0">
-                <h6 class="px-3 pt-3 pb-2 mb-0 text-muted small fw-bold">
-                    <i class="bi bi-tags me-2"></i>Promociones ({{ promociones.length }})
+            <div v-if="usuarios.length > 0" class="border-b border-slate-200">
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-people text-sm"></i>Usuarios ({{
+                        usuarios.length
+                    }})
                 </h6>
-                <div class="list-group list-group-flush">
+                <div class="divide-y divide-slate-100">
                     <button
-                        v-for="promocion in promociones"
-                        :key="promocion.id"
-                        class="list-group-item list-group-item-action py-3"
-                        @click="navigateTo('promociones', promocion.id)"
-                        :title="`Ver detalles de ${promocion.nombre}`"
+                        v-for="usuario in usuarios"
+                        :key="usuario.id"
+                        class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
+                        @click="navigateToUsuario(usuario)"
+                        :title="`Ver detalles de ${usuario.nombre} ${usuario.apellidos || ''}`"
                     >
-                        <div
-                            class="d-flex justify-content-between align-items-start"
-                        >
-                            <div class="flex-grow-1 me-2">
-                                <h6 class="mb-1">
-                                    <i class="bi bi-gift me-2 text-warning"></i>{{ promocion.nombre }}
-                                </h6>
-                                <p class="mb-2 small text-muted">
-                                    {{ promocion.descripcion }}
-                                </p>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar-event me-1"></i>
-                                    Válido hasta: {{ formatDate(promocion.fecha_fin) }}
-                                </small>
-                            </div>
-                            <div class="text-end flex-shrink-0">
-                                <span class="badge bg-danger fs-6">
-                                    <span v-if="promocion.descuento_porcentaje">
-                                        -{{ promocion.descuento_porcentaje }}%
-                                    </span>
-                                    <span v-else>
-                                        -Bs. {{ formatMoney(promocion.descuento_monto) }}
-                                    </span>
+                        <div class="shrink-0">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-bold text-slate-500"
+                            >
+                                <img
+                                    v-if="getUserImageUrl(usuario)"
+                                    :src="getUserImageUrl(usuario)"
+                                    :alt="usuario.nombre"
+                                    class="h-10 w-10 rounded-full object-cover"
+                                    loading="lazy"
+                                />
+                                <span v-else>
+                                    {{ getUserInitials(usuario) }}
                                 </span>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h6
+                                        class="truncate text-sm font-semibold text-slate-800"
+                                    >
+                                        {{ usuario.nombre }}
+                                        {{ usuario.apellidos }}
+                                    </h6>
+                                    <div
+                                        class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-slate-500"
+                                    >
+                                        <i class="bi bi-credit-card"></i>
+                                        {{ usuario.ci || "Sin CI" }}
+                                        <span class="mx-1 text-slate-300"
+                                            >•</span
+                                        >
+                                        <i class="bi bi-envelope"></i>
+                                        {{ usuario.email }}
+                                    </div>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <span
+                                        class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                        :class="
+                                            usuario.estado
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-slate-100 text-slate-600'
+                                        "
+                                    >
+                                        {{ usuario.role || "Usuario" }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </button>
                 </div>
             </div>
 
-            <!-- Footer con hint de navegación -->
-            <div class="px-3 py-2 bg-light border-top text-center">
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
+            <div v-if="categorias.length > 0" class="border-b border-slate-200">
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-grid text-sm"></i>Categorías ({
+                    categorias.length })
+                </h6>
+                <div class="divide-y divide-slate-100">
+                    <button
+                        v-for="categoria in categorias"
+                        :key="categoria.id"
+                        class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
+                        @click="navigateToCategoria(categoria)"
+                        :title="`Ver productos de ${categoria.nombre}`"
+                    >
+                        <div class="shrink-0">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-slate-100"
+                            >
+                                <img
+                                    v-if="getCategoryImageUrl(categoria)"
+                                    :src="getCategoryImageUrl(categoria)"
+                                    :alt="categoria.nombre"
+                                    class="h-10 w-10 object-cover"
+                                    loading="lazy"
+                                />
+                                <i
+                                    v-else
+                                    class="bi bi-grid text-lg text-slate-400"
+                                ></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h6
+                                        class="truncate text-sm font-semibold text-slate-800"
+                                    >
+                                        {{ categoria.nombre }}
+                                    </h6>
+                                    <p
+                                        class="mt-0.5 line-clamp-1 text-[11px] text-slate-500"
+                                    >
+                                        {{
+                                            categoria.descripcion ||
+                                            "Sin descripción"
+                                        }}
+                                    </p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <span
+                                        class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                                    >
+                                        {{ categoria.productos_count }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div
+                v-if="proveedores.length > 0"
+                class="border-b border-slate-200"
+            >
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-truck text-sm"></i>Proveedores ({
+                    proveedores.length })
+                </h6>
+                <div class="divide-y divide-slate-100">
+                    <button
+                        v-for="proveedor in proveedores"
+                        :key="proveedor.id"
+                        class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
+                        @click="navigateToProveedor(proveedor)"
+                        :title="`Ver proveedor ${proveedor.nombre}`"
+                    >
+                        <div class="shrink-0">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"
+                            >
+                                <i class="bi bi-truck text-base"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h6
+                                        class="truncate text-sm font-semibold text-slate-800"
+                                    >
+                                        {{ proveedor.nombre }}
+                                    </h6>
+                                    <div
+                                        class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-slate-500"
+                                    >
+                                        <i class="bi bi-credit-card"></i>
+                                        {{ proveedor.nit || "Sin NIT" }}
+                                        <span class="mx-1 text-slate-300"
+                                            >•</span
+                                        >
+                                        <i class="bi bi-telephone"></i>
+                                        {{
+                                            proveedor.telefono || "Sin teléfono"
+                                        }}
+                                    </div>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <span
+                                        class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                        :class="
+                                            String(
+                                                proveedor.estado || '',
+                                            ).toLowerCase() === 'activo'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-slate-100 text-slate-600'
+                                        "
+                                    >
+                                        {{ proveedor.estado || "Sin estado" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="promociones.length > 0">
+                <h6
+                    class="mb-0 flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                >
+                    <i class="bi bi-tags text-sm"></i>Promociones ({{
+                        promociones.length
+                    }})
+                </h6>
+                <div class="divide-y divide-slate-100">
+                    <button
+                        v-for="promocion in promociones"
+                        :key="promocion.id"
+                        class="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none active:bg-slate-100"
+                        @click="navigateTo('promociones', promocion.id)"
+                        :title="`Ver detalles de ${promocion.nombre}`"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h6
+                                        class="flex items-center gap-2 text-sm font-semibold text-slate-800"
+                                    >
+                                        <i
+                                            class="bi bi-gift text-amber-500"
+                                        ></i>
+                                        {{ promocion.nombre }}
+                                    </h6>
+                                    <p class="mt-1 text-sm text-slate-500">
+                                        {{ promocion.descripcion }}
+                                    </p>
+                                    <small
+                                        class="mt-2 flex items-center text-xs text-slate-500"
+                                    >
+                                        <i
+                                            class="bi bi-calendar-event mr-1"
+                                        ></i>
+                                        Válido hasta:
+                                        {{ formatDate(promocion.fecha_fin) }}
+                                    </small>
+                                </div>
+                                <div class="shrink-0">
+                                    <span
+                                        class="inline-flex rounded-full bg-rose-600 px-2.5 py-0.5 text-xs font-semibold text-white"
+                                    >
+                                        <span
+                                            v-if="
+                                                promocion.descuento_porcentaje
+                                            "
+                                        >
+                                            -{{
+                                                promocion.descuento_porcentaje
+                                            }}%
+                                        </span>
+                                        <span v-else>
+                                            -Bs.
+                                            {{
+                                                formatMoney(
+                                                    promocion.descuento_monto,
+                                                )
+                                            }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="border-t border-slate-200 bg-slate-50 px-3 py-2 text-center"
+            >
+                <small
+                    class="flex items-center justify-center text-[11px] text-slate-500"
+                >
+                    <i class="bi bi-info-circle mr-1"></i>
                     Haz clic en un resultado para ver más detalles
                 </small>
             </div>
@@ -177,24 +442,144 @@
 <script setup>
 import { router } from "@inertiajs/vue3";
 
-const props = defineProps({
+defineProps({
     productos: Array,
     promociones: Array,
+    categorias: Array,
+    proveedores: Array,
     menus: Array,
+    usuarios: Array,
 });
 
 const emit = defineEmits(["close"]);
 
+const normalizeImageUrl = (value) => {
+    const url = String(value || "")
+        .trim()
+        .replace(/\\/g, "/");
+
+    if (!url) {
+        return "";
+    }
+
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url;
+    }
+
+    if (url.startsWith("/")) {
+        return url;
+    }
+
+    if (url.startsWith("storage/")) {
+        return `/${url}`;
+    }
+
+    return `/storage/${url}`;
+};
+
+const getImageUrl = (producto) => {
+    const candidate =
+        producto?.imagen ??
+        producto?.imagen_url ??
+        producto?.imagenes?.[0]?.ruta ??
+        producto?.imagenes?.[0]?.url ??
+        producto?.imagenes?.[0] ??
+        "";
+
+    return candidate ? normalizeImageUrl(candidate) : "";
+};
+
+const getCategoryImageUrl = (categoria) => {
+    const candidate = categoria?.imagen || "";
+    return candidate ? normalizeImageUrl(candidate) : "";
+};
+
+const getUserImageUrl = (usuario) => {
+    const candidate = usuario?.profile_photo_url || "";
+
+    return candidate ? normalizeImageUrl(candidate) : "";
+};
+
+const getUserInitials = (usuario) => {
+    const first = String(usuario?.nombre || "")
+        .trim()
+        .charAt(0);
+    const last = String(usuario?.apellidos || "")
+        .trim()
+        .charAt(0);
+    return `${first}${last}`.trim() || "U";
+};
+
+const getSearchLabel = (producto) => producto?.nombre || producto?.codigo || "";
+
+const navigateToProducto = (producto) => {
+    const searchTerm = getSearchLabel(producto);
+
+    emit("close");
+
+    router.visit(
+        route("productos.index", {
+            search: searchTerm,
+            highlight: producto.id,
+        }),
+        {
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const navigateToUsuario = (usuario) => {
+    emit("close");
+
+    router.visit(
+        route("usuarios.index", {
+            buscar: `${usuario.nombre} ${usuario.apellidos || ""}`.trim(),
+            highlight: usuario.id,
+        }),
+        {
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const navigateToCategoria = (categoria) => {
+    emit("close");
+
+    router.visit(
+        route("categorias.index", {
+            search: categoria.nombre,
+            highlight: categoria.id,
+        }),
+        {
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const navigateToProveedor = (proveedor) => {
+    emit("close");
+
+    router.visit(
+        route("proveedores.index", {
+            search: proveedor.nombre,
+            highlight: proveedor.id,
+        }),
+        {
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
 const navigateTo = (type, id) => {
     emit("close");
 
-    // Navegación a los detalles del producto o promoción
-    if (type === 'productos') {
-        router.visit(route('productos.show', id));
-    } else if (type === 'promociones') {
-        router.visit(route('promociones.show', id));
-    } else if (type === 'menus') {
-        // Para menús, id es el nombre de la ruta
+    if (type === "promociones") {
+        router.visit(route("promociones.show", id));
+    } else if (type === "menus") {
         router.visit(route(id));
     }
 };
@@ -202,52 +587,3 @@ const navigateTo = (type, id) => {
 const formatMoney = (amount) => parseFloat(amount || 0).toFixed(2);
 const formatDate = (date) => new Date(date).toLocaleDateString("es-ES");
 </script>
-
-<style scoped>
-.search-results {
-    background-color: var(--card-bg, #ffffff);
-    color: var(--text-primary, #212121);
-    border-color: var(--border-color, #dee2e6);
-}
-
-.list-group-item {
-    background-color: var(--card-bg, #ffffff);
-    color: var(--text-primary, #212121);
-    border-color: var(--border-color, #dee2e6);
-    transition: all 0.2s ease;
-}
-
-.list-group-item:hover {
-    background-color: var(--bg-secondary, #f8f9fa);
-    transform: translateX(4px);
-}
-
-.list-group-item:active {
-    background-color: var(--bg-secondary, #e9ecef);
-}
-
-/* Mejora en scrollbar para resultados largos */
-.search-results::-webkit-scrollbar {
-    width: 8px;
-}
-
-.search-results::-webkit-scrollbar-track {
-    background: var(--bg-secondary, #f8f9fa);
-}
-
-.search-results::-webkit-scrollbar-thumb {
-    background: var(--border-color, #dee2e6);
-    border-radius: 4px;
-}
-
-.search-results::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted, #6c757d);
-}
-
-/* Responsive para móvil */
-@media (max-width: 575.98px) {
-    .search-results {
-        max-height: 400px !important;
-    }
-}
-</style>

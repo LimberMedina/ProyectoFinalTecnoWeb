@@ -1,0 +1,228 @@
+﻿@startuml
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam ArrowFontSize 10
+skinparam shadowing false
+skinparam roundcorner 12
+
+title cmp Diagrama de Navegacion - Actor Cliente (Completo)
+
+' COLORES
+!define CLIENT #D6EAF8
+!define SERVER #FDEBD0
+!define FORM   #FCF3CF
+!define PROFILE #E8DAEF
+!define CONFIG #D5F4E6
+
+' =====================================================================
+' HOME PUBLICO
+' =====================================================================
+rectangle "Welcome (Home)\n<<Client Page>>\n----\ncanLogin: Boolean\ncanRegister: Boolean\nlaravelVersion: String\nphpVersion: String" as Home CLIENT
+
+' =====================================================================
+' AUTENTICACIÃ“N
+' =====================================================================
+rectangle "Auth/Login\n<<Form>>\n----\nemail: text\npassword: text\nremember: Boolean\ningresar: int" as Login FORM
+
+rectangle "Auth/Register\n<<Form>>\n----\nname: text\nemail: text\npassword: text\npassword_confirmation: text" as Register FORM
+
+rectangle "LoginController\n<<Server Page>>\n----\nemail: text\npassword: text\nlogin(): void" as LoginCtrl SERVER
+
+rectangle "RegisterController\n<<Server Page>>\n----\nname: text\nemail: text\npassword: text\nregister(): void" as RegisterCtrl SERVER
+
+' =====================================================================
+' DASHBOARD CLIENTE
+' =====================================================================
+rectangle "DashboardController\n<<Server Page>>\n----\nindex(): Object" as DashboardCtrl SERVER
+
+rectangle "Dashboard\n<<Client Page>>\n----\nrol: text\nproductos: Object\npromociones: List\ncarrito: Object\nindicadores: Object" as Dashboard CLIENT
+
+' =====================================================================
+' CATÃLOGO DE PRODUCTOS
+' =====================================================================
+rectangle "ProductoController\n<<Server Page>>\n----\nsearch: text\ncategoria_id: int\nindex(): List\nshow(): Object" as ProductoCtrl SERVER
+
+rectangle "Productos/Index\n<<Client Page>>\n----\nproductos: List\ncategorias: List\nfilters: Object\nrol: text" as ProductosIndex CLIENT
+
+rectangle "Productos/Show\n<<Client Page>>\n----\nproducto: Object\ncategoria: Object\npromociones: List" as ProductosShow CLIENT
+
+' =====================================================================
+' PROMOCIONES
+' =====================================================================
+rectangle "PromocionController\n<<Server Page>>\n----\nid: int\nindex(): List\nshow(): Object" as PromocionCtrl SERVER
+
+rectangle "Promociones/Index\n<<Client Page>>\n----\npromociones: List\nfiltro_estado: text" as PromocionesIndex CLIENT
+
+rectangle "Promociones/Show\n<<Client Page>>\n----\npromocion: Object\ncategorias: List\nproductos: List" as PromocionesShow CLIENT
+
+' =====================================================================
+' CARRITO DE COMPRAS
+' =====================================================================
+rectangle "CarritoController\n<<Server Page>>\n----\nproducto_id: int\ncantidad: int\nindex(): Object\nstore(): void\nupdate(): void\ndestroy(): void" as CarritoCtrl SERVER
+
+rectangle "Carrito/Index\n<<Client Page>>\n----\ncarrito: Object\ndetalles: List\ntotal: double" as CarritoIndex CLIENT
+
+' =====================================================================
+' REALIZAR PEDIDO ONLINE
+' =====================================================================
+rectangle "PedidoOnlineController\n<<Server Page>>\n----\ndireccion_entrega: text\nrealizarPedido(): void\nwebhookVentaSimulado(): void" as PedidoOnlineCtrl SERVER
+
+rectangle "Pedidos/Confirmacion\n<<Client Page>>\n----\nventa: Object\ndetalles: List\npago: Object" as PedidoConfirmacion CLIENT
+
+' =====================================================================
+' MIS PEDIDOS
+' =====================================================================
+rectangle "MisPedidosController\n<<Server Page>>\n----\nid: int\nestado: text\nindex(): List\nshow(): Object\nconfirmarRecibido(): void" as MisPedidosCtrl SERVER
+
+rectangle "MisPedidos/Index\n<<Client Page>>\n----\npedidos: List\nfiltro: text" as MisPedidosIndex CLIENT
+
+rectangle "MisPedidos/Show\n<<Client Page>>\n----\npedido: Object\ndetalles: List\nestado: text" as MisPedidosShow CLIENT
+
+' =====================================================================
+' MIS CRÃ‰DITOS
+' =====================================================================
+rectangle "MisCreditosController\n<<Server Page>>\n----\nid: int\nmonto: double\nindex(): List\nshow(): Object\nregistrarPago(): void" as MisCreditosCtrl SERVER
+
+rectangle "MisCreditos/Index\n<<Client Page>>\n----\ncreditos: List\nfiltros: Object" as MisCreditosIndex CLIENT
+
+rectangle "MisCreditos/Show\n<<Client Page>>\n----\ncredito: Object\ncuotas: List\npagos: List" as MisCreditosShow CLIENT
+
+' =====================================================================
+' MIS PAGOS
+' =====================================================================
+rectangle "MisPagosController\n<<Server Page>>\n----\nid: int\nindex(): List" as MisPagosCtrl SERVER
+
+rectangle "MisPagos/Index\n<<Client Page>>\n----\npagos: List\nfiltros: Object" as MisPagosIndex CLIENT
+
+' =====================================================================
+' BÚSQUEDA GLOBAL
+' =====================================================================
+rectangle "SearchController\n<<Server Page>>\n----\nq: text\nsearch(): Object" as SearchCtrl SERVER
+
+rectangle "Busqueda/Resultados\n<<Client Page>>\n----\nproductos: List\npromociones: List\nfiltros: Object\ntotal_resultados: int" as BusquedaResultados CLIENT
+
+' =====================================================================
+' NOTIFICACIONES
+' =====================================================================
+rectangle "NotificationController\n<<Server Page>>\n----\nid: int\nindex(): List\ngetUnread(): Object\nmarkAsRead(): void\nmarkAllAsRead(): void" as NotificationCtrl SERVER
+
+rectangle "Notificaciones/Index\n<<Client Page>>\n----\nnotificaciones: List\nno_leidas: int\nfiltros: Object" as NotificacionesIndex CLIENT
+
+rectangle "Notificaciones/Show\n<<Client Page>>\n----\nnotificacion: Object\nfecha_creacion: datetime\ndetalles: text" as NotificacionesShow CLIENT
+
+' =====================================================================
+' PERFIL DE USUARIO
+' =====================================================================
+rectangle "ProfileController\n<<Server Page>>\n----\nshow(): Object\nedit(): Object\nupdate(): void" as ProfileCtrl SERVER
+
+rectangle "Perfil/Show\n<<Client Page>>\n----\nusuario: Object\nnombre: text\nemail: text\nci: text\ntelefono: text" as PerfilShow PROFILE
+
+rectangle "Perfil/EditPersonal\n<<Form>>\n----\nnombre: Input Element\napellidos: Input Element\nci: Input Element\ntelefono: Input Element\ndireccion: Text Area Element\nfoto: Input Element" as PerfilEdit PROFILE
+
+rectangle "Perfil/ChangePassword\n<<Form>>\n----\npassword_actual: Input Element\npassword_nueva: Input Element\npassword_confirmacion: Input Element" as PerfilPassword PROFILE
+
+' =====================================================================
+' CONFIGURACIONES DE USUARIO
+' =====================================================================
+rectangle "UserSettingsController\n<<Server Page>>\n----\nindex(): Object\nupdatePreferences(): void\ngetSessions(): Object" as SettingsCtrl SERVER
+
+rectangle "Configuraciones/Index\n<<Client Page>>\n----\npreferencias: Object\nsesiones: List" as ConfigClientIndex CONFIG
+
+rectangle "Configuraciones/Tema\n<<Form>>\n----\ntema: Select Element\ntipo: niños/jóvenes/adultos\nmodo: dia/noche\ntamanio_fuente: small/normal/large\ncontraste: normal/high" as ConfigClientTema CONFIG
+
+rectangle "Configuraciones/Sesiones\n<<Client Page>>\n----\nsesiones_activas: List\ndispositivos: List\nipaddress: text\nultima_actividad: datetime" as ConfigClientSesiones CONFIG
+
+' =====================================================================
+' RELACIONES DE NAVEGACIÃ“N
+' =====================================================================
+
+Home --> Login : <<link>> Iniciar SesiÃ³n
+Home --> Register : <<link>> Registrarse
+Home --> Dashboard : <<link>> autenticado
+
+Login --> LoginCtrl : <<submit>>
+LoginCtrl --> Dashboard : <<build>>
+
+Register --> RegisterCtrl : <<submit>>
+RegisterCtrl --> Dashboard : <<build>>
+
+Dashboard --> DashboardCtrl : <<link>>
+DashboardCtrl --> Dashboard : <<build>>
+
+Dashboard --> ProductoCtrl : <<link>> Ver Productos
+ProductoCtrl --> ProductosIndex : <<build>>
+ProductosIndex --> ProductosShow : <<link>>
+
+Dashboard --> PromocionCtrl : <<link>> Ver Promociones
+PromocionCtrl --> PromocionesIndex : <<build>>
+PromocionesIndex --> PromocionesShow : <<link>>
+PromocionesShow --> ProductosShow : <<link>> Ver Producto
+
+ProductosShow --> CarritoCtrl : <<submit>> Agregar al Carrito
+Dashboard --> CarritoCtrl : <<link>> Mi Carrito
+CarritoCtrl --> CarritoIndex : <<build>>
+CarritoIndex --> CarritoCtrl : <<submit>> Actualizar/Eliminar
+
+CarritoIndex --> PedidoOnlineCtrl : <<submit>> Realizar Pedido
+PedidoOnlineCtrl --> PedidoConfirmacion : <<build>>
+PedidoConfirmacion --> Dashboard : <<link>> Volver al inicio
+
+Dashboard --> MisPedidosCtrl : <<link>> Mis Pedidos
+MisPedidosCtrl --> MisPedidosIndex : <<build>>
+MisPedidosIndex --> MisPedidosShow : <<link>>
+MisPedidosShow --> MisPedidosCtrl : <<submit>> Confirmar Recibo
+MisPedidosCtrl --> MisPedidosIndex : <<redirect>>
+
+Dashboard --> MisCreditosCtrl : <<link>> Mis CrÃ©ditos
+MisCreditosCtrl --> MisCreditosIndex : <<build>>
+MisCreditosIndex --> MisCreditosShow : <<link>>
+MisCreditosShow --> MisCreditosCtrl : <<submit>> Pagar Cuota QR
+MisCreditosCtrl --> MisCreditosShow : <<redirect>>
+
+Dashboard --> MisPagosIndex : <<link>> Mis Pagos
+
+' -- Búsqueda Global --
+Dashboard --> SearchCtrl : <<link>> Buscar
+ProductosIndex --> SearchCtrl : <<link>> Buscar
+SearchCtrl --> BusquedaResultados : <<build>>
+BusquedaResultados --> ProductosShow : <<link>>
+BusquedaResultados --> PromocionesShow : <<link>>
+
+' -- Notificaciones --
+Dashboard --> NotificationCtrl : <<link>> Notificaciones
+NotificationCtrl --> NotificacionesIndex : <<build>>
+NotificacionesIndex --> NotificacionesShow : <<link>>
+NotificacionesShow --> NotificationCtrl : <<submit>> Marcar Leída
+NotificationCtrl --> NotificacionesIndex : <<redirect>>
+
+' -- Perfil de Usuario --
+Dashboard --> ProfileCtrl : <<link>> Mi Perfil
+ProfileCtrl --> PerfilShow : <<build>>
+PerfilShow --> ProfileCtrl : <<link>> Editar Información
+ProfileCtrl --> PerfilEdit : <<build>>
+PerfilEdit --> ProfileCtrl : <<submit>> Actualizar
+ProfileCtrl --> PerfilShow : <<redirect>>
+PerfilShow --> PerfilPassword : <<link>> Cambiar Contraseña
+PerfilPassword --> ProfileCtrl : <<submit>> Actualizar Contraseña
+ProfileCtrl --> PerfilShow : <<redirect>>
+
+' -- Configuraciones de Usuario --
+Dashboard --> SettingsCtrl : <<link>> Configuraciones
+SettingsCtrl --> ConfigClientIndex : <<build>>
+ConfigClientIndex --> ConfigClientTema : <<link>> Preferencias Visuales
+ConfigClientTema --> SettingsCtrl : <<submit>> Guardar Tema
+SettingsCtrl --> ConfigClientIndex : <<redirect>>
+ConfigClientIndex --> ConfigClientSesiones : <<link>> Mis Sesiones
+ConfigClientSesiones --> SettingsCtrl : <<submit>> Cerrar Sesión Remota
+
+legend bottom right
+|= Tipo |= Significado |
+|<back:#D6EAF8> Client Page </back>| Vista que ve el usuario en el navegador |
+|<back:#FDEBD0> Server Page </back>| Controlador o proceso ejecutado en servidor |
+|<back:#FCF3CF> Form </back>| Pantalla o sección de captura de datos |
+|<back:#E8DAEF> Perfil </back>| Información y edición del perfil usuario |
+|<back:#D5F4E6> Configuración</back>| Ajustes personales y preferencias |
+endlegend
+
+@enduml

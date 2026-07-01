@@ -14,13 +14,17 @@ return new class extends Migration
         Schema::create('productos', function (Blueprint $table) {
             $table->increments('id');
             $table->string('nombre');
+            $table->text('descripcion')->nullable();
             $table->string('codigo')->unique();
+            $table->text('imagen')->nullable();
+            $table->text('qr')->nullable();
             $table->decimal('precio_compra', 10, 2);
             $table->decimal('precio_venta', 10, 2);
             $table->decimal('precio_venta_mayorista', 10, 2);
             $table->integer('stock_actual')->default(0);
             $table->integer('stock_minimo')->default(0);
             $table->string('marca')->nullable();
+            $table->string('genero', 30)->nullable();
             $table->unsignedInteger('categoria_id');
             $table->boolean('estado')->default(true);
             $table->timestamps();

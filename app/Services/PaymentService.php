@@ -330,21 +330,7 @@ class PaymentService
      */
     protected function updateCreditProgress(int $creditId): void
     {
-        $credito = \App\Models\Credito::with('cuotas')->findOrFail($creditId);
-        
-        $totalPagado = $credito->cuotas->sum('monto_pagado');
-        $saldoPendiente = $credito->cuotas->sum('monto_pendiente');
-
-        $credito->monto_pagado = $totalPagado;
-        $credito->monto_pendiente = $saldoPendiente;
-
-        // Si todas las cuotas están pagadas, marcar crédito como pagado
-        $cuotasPendientes = $credito->cuotas->whereIn('estado', ['pendiente', 'vencida'])->count();
-        
-        if ($cuotasPendientes === 0 && $saldoPendiente <= 0.01) {
-            $credito->estado = 'pagado';
-        }
-
-        $credito->save();
+        $credito = \App\Models\Credito::findOrFail($creditId);
+        $credito->sincronizarEstado();
     }
 }

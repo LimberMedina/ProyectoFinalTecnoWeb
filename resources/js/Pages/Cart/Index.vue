@@ -29,12 +29,13 @@ const finalizarCompra = async () => {
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRF-TOKEN": document.querySelector(
-                    'meta[name="csrf-token"]'
+                    'meta[name="csrf-token"]',
                 ).content,
             },
             body: JSON.stringify({
                 items: cartItems.value.map((item) => ({
-                    producto_id: item.producto_id,
+                    producto_variante_id:
+                        item.producto_variante_id || item.variante?.id,
                     cantidad: item.cantidad,
                 })),
                 metodo_pago: metodoPago.value,
@@ -47,8 +48,8 @@ const finalizarCompra = async () => {
             clearCart();
             alert(
                 `¡Compra realizada exitosamente! Total: ${formatPrice(
-                    data.total
-                )}`
+                    data.total,
+                )}`,
             );
             router.visit(route("dashboard"));
         } else {
@@ -119,6 +120,11 @@ const solicitarCredito = () => {
                                 <div class="col-md-4">
                                     <h6>{{ item.nombre }}</h6>
                                     <p class="text-muted small mb-0">
+                                        Variante:
+                                        {{ item.variante?.talla || "-" }} /
+                                        {{ item.variante?.color || "-" }}
+                                    </p>
+                                    <p class="text-muted small mb-0">
                                         {{ formatPrice(item.precio_unitario) }}
                                     </p>
                                     <p
@@ -136,7 +142,9 @@ const solicitarCredito = () => {
                                         @change="
                                             updateQuantity(
                                                 item.id,
-                                                $event.target.value
+                                                $event.target.value,
+                                                item.producto_variante_id ||
+                                                    item.variante?.id,
                                             )
                                         "
                                         class="form-control"

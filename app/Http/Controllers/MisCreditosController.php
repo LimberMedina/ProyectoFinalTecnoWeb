@@ -122,12 +122,7 @@ class MisCreditosController extends Controller
             $credito = $cuota->credito;
             $credito->monto_pagado += $request->monto;
             $credito->monto_pendiente -= $request->monto;
-            if ($credito->monto_pendiente <= 0.01) {
-                $credito->estado = 'pagado';
-                $credito->monto_pendiente = 0;
-                $credito->dias_mora = 0;
-            }
-            $credito->save();
+            $credito->sincronizarEstado();
 
             \DB::commit();
             return redirect()->back()->with('success', 'Pago registrado exitosamente.');

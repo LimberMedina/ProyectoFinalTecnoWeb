@@ -1,50 +1,30 @@
 <script setup>
 import FlashNotification from "@/Components/FlashNotification.vue";
 import ConfirmationModal from "@/Components/ConfirmationModal.vue";
-
 import { computed, ref } from "vue";
+import PublicStoreLayout from "@/Layouts/PublicStoreLayout.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import homeSvg from "./assets/Home.svg";
 import { Link, router } from "@inertiajs/vue3";
-import { Bar, Line, Doughnut } from "vue-chartjs";
-import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    ArcElement,
-} from "chart.js";
-
-ChartJS.register(
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    ArcElement
-);
 
 const props = defineProps({
     rol: String,
     kpis: Object,
-    graficos: Object,
     indicadores: Object,
     productos: Object,
     promociones: Array,
     carrito: Object,
+    movimientosRecientes: Array,
 });
 
 const isCliente = computed(() => props.rol === "cliente");
+const dashboardLayout = computed(() =>
+    isCliente.value ? PublicStoreLayout : AppLayout,
+);
+const dashboardLayoutProps = computed(() =>
+    isCliente.value ? {} : { title: "Dashboard" },
+);
 
-
-// Modal para cantidad
 const showCantidadModal = ref(false);
 const productoSeleccionado = ref(null);
 const cantidadAgregar = ref(1);
@@ -69,7 +49,7 @@ const agregarAlCarrito = () => {
                 showCantidadModal.value = false;
                 productoSeleccionado.value = null;
             },
-        }
+        },
     );
 };
 
@@ -82,10 +62,13 @@ const calcularPrecioConDescuento = (producto) => {
 };
 
 const tienePromocion = (producto) => {
-    return producto.promociones && producto.promociones.length > 0 && producto.promociones[0].valor_descuento_decimal > 0;
+    return (
+        producto.promociones &&
+        producto.promociones.length > 0 &&
+        producto.promociones[0].valor_descuento_decimal > 0
+    );
 };
 
-// Obtener la URL de la imagen principal del producto
 const getImageUrl = (producto) => {
     if (producto.imagenes && producto.imagenes.length > 0) {
         return `/storage/${producto.imagenes[0].url}`;
@@ -93,487 +76,449 @@ const getImageUrl = (producto) => {
     return "/images/no-image.png";
 };
 
-// Configuración de colores según tema
-const chartColors = {
-    primary:
-        getComputedStyle(document.documentElement).getPropertyValue(
-            "--accent"
-        ) || "#4f46e5",
-    success: "#10b981",
-    danger: "#ef4444",
-    warning: "#f59e0b",
-    info: "#3b82f6",
-};
-
-// Datos para gráfico de ventas por día
-const ventasPorDiaData = computed(() => {
-    if (!props.graficos?.ventas_por_dia) return null;
-
-    return {
-        labels: props.graficos.ventas_por_dia.map((v) =>
-            new Date(v.fecha).toLocaleDateString("es-ES", {
-                day: "2-digit",
-                month: "short",
-            })
-        ),
-        datasets: [
-            {
-                label: "Ventas",
-                data: props.graficos.ventas_por_dia.map((v) => v.cantidad),
-                backgroundColor: chartColors.primary,
-            },
-        ],
-    };
-});
-
-// Datos para gráfico de categorías
-const categoriesData = computed(() => {
-    if (!props.graficos?.ventas_por_categoria) return null;
-
-    return {
-        labels: props.graficos.ventas_por_categoria.map((c) => c.nombre),
-        datasets: [
-            {
-                label: "Productos Vendidos",
-                data: props.graficos.ventas_por_categoria.map((c) => c.total),
-                backgroundColor: [
-                    chartColors.primary,
-                    chartColors.success,
-                    chartColors.warning,
-                    chartColors.info,
-                    chartColors.danger,
-                ],
-            },
-        ],
-    };
-});
-
-const formatMoney = (amount) => parseFloat(amount || 0).toFixed(2);
+const formatMoney = (amount) =>
+    new Intl.NumberFormat("es-BO", {
+        style: "currency",
+        currency: "BOB",
+    }).format(parseFloat(amount || 0));
 </script>
 
 <template>
-    <AppLayout title="Dashboard">
+    <component :is="dashboardLayout" v-bind="dashboardLayoutProps">
         <FlashNotification />
-        <div class="container py-4">
-            <!-- Dashboard para Cliente -->
-            <div v-if="isCliente">
-                <h2 class="mb-4">Bienvenido a Tienda Elena</h2>
 
-                <!-- Resumen del carrito y cuenta -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card text-white bg-primary">
-                            <div class="card-body">
-                                <h6 class="card-title">Carrito Actual</h6>
-                                <h3 class="mb-0">
-                                    {{ carrito?.cantidad_items || 0 }}
-                                </h3>
-                                <small>productos</small>
-                            </div>
-                        </div>
+        <div
+            class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)]"
+        >
+            <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div class="mb-8 flex flex-col gap-3">
+                    <div
+                        class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-700 shadow-sm"
+                    >
+                        <span
+                            class="h-2 w-2 rounded-full bg-emerald-500"
+                        ></span>
+                        Dashboard
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-success">
-                            <div class="card-body">
-                                <h6 class="card-title">Total Carrito</h6>
-                                <h3 class="mb-0">
-                                    Bs. {{ formatMoney(carrito?.total) }}
-                                </h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-warning">
-                            <div class="card-body">
-                                <h6 class="card-title">Mis Compras</h6>
-                                <h3 class="mb-0">
-                                    {{ indicadores?.total_compras || 0 }}
-                                </h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-info">
-                            <div class="card-body">
-                                <h6 class="card-title">Créditos Activos</h6>
-                                <h3 class="mb-0">
-                                    {{ indicadores?.creditos_activos || 0 }}
-                                </h3>
-                            </div>
-                        </div>
+                    <div>
+                        <h1
+                            class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                        >
+                            {{
+                                isCliente
+                                    ? "Bienvenido a tu espacio en Tienda Elena"
+                                    : "Panel de control"
+                            }}
+                        </h1>
+                        <p
+                            class="mt-2 max-w-2xl text-sm leading-6 text-slate-600"
+                        >
+                            {{
+                                isCliente
+                                    ? "Este es tu resumen personal: carrito, compras y promociones especiales. Sigue navegando con confianza y conveniencia."
+                                    : "Monitorea ventas, promociones y productos con una vista rápida, limpia y predecible."
+                            }}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Promociones Activas -->
-                <div v-if="promociones && promociones.length > 0" class="mb-4">
-                    <h4 class="mb-3">🎉 Promociones Activas</h4>
-                    <div class="row g-3">
-                        <div
-                            v-for="promo in promociones"
-                            :key="promo.id"
-                            class="col-md-6"
-                        >
-                            <div class="card border-danger">
-                                <div class="card-body">
+                <div v-if="isCliente" class="space-y-8">
+                    <section
+                        class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div class="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+                            <div class="rounded-[2rem] bg-emerald-600/5 p-6">
+                                <span
+                                    class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700"
+                                >
+                                    Bienvenida a Tienda Elena
+                                </span>
+                                <h2
+                                    class="mt-6 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                                >
+                                    Disfruta de una experiencia cómoda y segura
+                                </h2>
+                                <p
+                                    class="mt-4 max-w-xl text-sm leading-6 text-slate-600"
+                                >
+                                    Aquí encontrarás un resumen de tu carrito,
+                                    tus compras y tus beneficios. Todo diseñado
+                                    para que sigas con una experiencia fluida y
+                                    agradable.
+                                </p>
+                                <div class="mt-6 grid gap-3 sm:grid-cols-2">
                                     <div
-                                        class="d-flex justify-content-between align-items-start"
+                                        class="rounded-3xl bg-white p-4 shadow-sm"
                                     >
-                                        <div>
-                                            <h5 class="card-title text-danger">
-                                                {{ promo.nombre }}
-                                            </h5>
-                                            <p class="mb-1">
-                                                {{ promo.descripcion }}
-                                            </p>
-                                            <p class="mb-0">
-                                                <strong
-                                                    >Descuento:
-                                                    {{
-                                                        promo.descuento
-                                                    }}%</strong
-                                                >
-                                            </p>
-                                        </div>
-                                        <span class="badge bg-danger"
-                                            >-{{ promo.descuento }}%</span
+                                        <p
+                                            class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
                                         >
+                                            Total en carrito
+                                        </p>
+                                        <p
+                                            class="mt-3 text-2xl font-black text-slate-900"
+                                        >
+                                            {{ formatMoney(carrito?.total) }}
+                                        </p>
                                     </div>
-                                    <small class="text-muted">
-                                        Válido hasta:
+                                    <div
+                                        class="rounded-3xl bg-white p-4 shadow-sm"
+                                    >
+                                        <p
+                                            class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+                                        >
+                                            Productos en carrito
+                                        </p>
+                                        <p
+                                            class="mt-3 text-2xl font-black text-slate-900"
+                                        >
+                                            {{ carrito?.cantidad_items || 0 }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid place-items-center">
+                                <div
+                                    class="w-full rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm"
+                                >
+                                    <img
+                                        :src="homeSvg"
+                                        alt="Bienvenida Tienda Elena"
+                                        class="mx-auto h-[360px] w-full object-contain"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="promociones && promociones.length > 0"
+                        class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div
+                            class="mb-5 flex items-center justify-between gap-4"
+                        >
+                            <div>
+                                <h2 class="text-xl font-black text-slate-900">
+                                    Promociones para ti
+                                </h2>
+                                <p class="mt-1 text-sm text-slate-500">
+                                    Descubre las ofertas vigentes y ahorra en tu
+                                    próxima compra.
+                                </p>
+                            </div>
+                            <i
+                                class="bi bi-lightning-charge-fill text-2xl text-emerald-600"
+                            ></i>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <article
+                                v-for="promo in promociones"
+                                :key="promo.id"
+                                class="rounded-3xl border border-rose-100 bg-gradient-to-br from-white to-rose-50 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <div>
+                                        <h3
+                                            class="text-lg font-bold text-rose-700"
+                                        >
+                                            {{ promo.nombre }}
+                                        </h3>
+                                        <p
+                                            class="mt-2 text-sm leading-6 text-slate-600"
+                                        >
+                                            {{ promo.descripcion }}
+                                        </p>
+                                        <p
+                                            class="mt-3 text-sm font-semibold text-slate-700"
+                                        >
+                                            Descuento: {{ promo.descuento }}%
+                                        </p>
+                                    </div>
+                                    <span
+                                        class="inline-flex shrink-0 items-center rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white"
+                                        >-{{ promo.descuento }}%</span
+                                    >
+                                </div>
+                                <p
+                                    class="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-400"
+                                >
+                                    Válido hasta
+                                    {{
+                                        new Date(
+                                            promo.fecha_fin,
+                                        ).toLocaleDateString("es-ES")
+                                    }}
+                                </p>
+                            </article>
+                        </div>
+                    </section>
+                </div>
+
+                <div v-else class="space-y-8">
+                    <section
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        <article
+                            class="rounded-[1.75rem] border border-emerald-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(16,185,129,0.45)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Ventas hoy
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.ventas_hoy || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                movimientos recientes
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-sky-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(14,165,233,0.45)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Ingresos hoy
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ formatMoney(kpis?.ingresos_hoy) }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                resumen diario
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-amber-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(245,158,11,0.45)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Productos activos
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.productos_activos || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                items disponibles
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-violet-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(139,92,246,0.40)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Promociones activas
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.promociones_activas || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">vigentes</p>
+                        </article>
+                    </section>
+
+                    <section
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        <article
+                            class="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.10)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Ventas esta semana
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.ventas_semana || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                últimos 7 días
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.10)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Ingresos este mes
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ formatMoney(kpis?.ingresos_mes) }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                importe acumulado
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.10)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Créditos pendientes
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.creditos_pendientes || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                clientes con saldo activo
+                            </p>
+                        </article>
+                        <article
+                            class="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.10)] transition hover:-translate-y-1"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                            >
+                                Stock crítico
+                            </p>
+                            <p class="mt-2 text-3xl font-black text-slate-900">
+                                {{ kpis?.stock_critico || 0 }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                productos con stock bajo
+                            </p>
+                        </article>
+                    </section>
+
+                    <section
+                        v-if="
+                            movimientosRecientes &&
+                            movimientosRecientes.length > 0
+                        "
+                        class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div
+                            class="mb-5 flex items-center justify-between gap-4"
+                        >
+                            <div>
+                                <h2 class="text-xl font-black text-slate-900">
+                                    Movimientos recientes
+                                </h2>
+                                <p class="mt-1 text-sm text-slate-500">
+                                    Entradas y salidas registradas por el
+                                    sistema.
+                                </p>
+                            </div>
+                            <i
+                                class="bi bi-box-seam text-2xl text-emerald-600"
+                            ></i>
+                        </div>
+
+                        <div class="space-y-3">
+                            <article
+                                v-for="movimiento in movimientosRecientes"
+                                :key="movimiento.id"
+                                class="flex flex-col gap-2 rounded-3xl border border-slate-100 bg-slate-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <p class="font-bold text-slate-900">
+                                        {{
+                                            movimiento.variante?.producto
+                                                ?.nombre ||
+                                            "Producto sin nombre"
+                                        }}
+                                        <span class="text-slate-400">·</span>
+                                        {{
+                                            movimiento.variante?.nombre ||
+                                            "Variante"
+                                        }}
+                                    </p>
+                                    <p class="text-sm text-slate-500">
+                                        {{ movimiento.motivo }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="flex items-center gap-3 text-sm font-semibold"
+                                >
+                                    <span
+                                        class="rounded-full px-3 py-1"
+                                        :class="
+                                            movimiento.tipo_movimiento ===
+                                            'salida'
+                                                ? 'bg-rose-100 text-rose-700'
+                                                : movimiento.tipo_movimiento ===
+                                                    'ingreso'
+                                                  ? 'bg-emerald-100 text-emerald-700'
+                                                  : 'bg-amber-100 text-amber-700'
+                                        "
+                                    >
+                                        {{ movimiento.tipo_movimiento }}
+                                    </span>
+                                    <span class="text-slate-700">
+                                        {{ movimiento.cantidad }} unid.
+                                    </span>
+                                    <span class="text-slate-400">
                                         {{
                                             new Date(
-                                                promo.fecha_fin
+                                                movimiento.fecha,
                                             ).toLocaleDateString("es-ES")
                                         }}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Productos por Categoría -->
-                <div v-if="productos">
-                    <h4 class="mb-3">🛒 Catálogo de Productos</h4>
-
-                    <div
-                        v-for="(items, categoria) in productos"
-                        :key="categoria"
-                        class="mb-5"
-                    >
-                        <h5 class="border-bottom pb-2 mb-3">{{ categoria }}</h5>
-                        <div class="row g-3">
-                            <div
-                                v-for="producto in items"
-                                :key="producto.id"
-                                class="col-md-3"
-                            >
-                                <div class="card h-100 position-relative">
-                                    <!-- Badge de promoción -->
-                                    <span
-                                        v-if="tienePromocion(producto)"
-                                        class="position-absolute top-0 end-0 badge bg-danger m-2"
-                                    >
-                                        -{{ producto.promociones[0].valor_descuento_decimal }}%
                                     </span>
-
-
-                                    <!-- Imagen real del producto -->
-                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
-                                        <img
-                                            :src="getImageUrl(producto)"
-                                            :alt="producto.nombre"
-                                            style="max-height: 140px; max-width: 100%; object-fit: contain;"
-                                            class="p-2 w-100"
-                                            loading="lazy"
-                                        />
-                                    </div>
-
-                                    <div class="card-body d-flex flex-column">
-                                        <h6 class="card-title">
-                                            {{ producto.nombre }}
-                                        </h6>
-                                        <p
-                                            class="card-text text-muted small mb-2"
-                                        >
-                                            {{
-                                                producto.descripcion?.substring(
-                                                    0,
-                                                    60
-                                                )
-                                            }}...
-                                        </p>
-
-                                        <!-- Precio y stock -->
-                                        <div class="mt-auto">
-                                            <div v-if="tienePromocion(producto)">
-                                                <span class="text-decoration-line-through text-muted">
-                                                    {{
-                                                        new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(producto.precio_venta)
-                                                    }}
-                                                </span>
-                                                <br />
-                                                <strong class="text-danger fs-5">
-                                                    {{
-                                                        new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(calcularPrecioConDescuento(producto))
-                                                    }}
-                                                </strong>
-                                            </div>
-                                            <div v-else>
-                                                <strong class="fs-5">
-                                                    {{
-                                                        new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(producto.precio_venta)
-                                                    }}
-                                                </strong>
-                                            </div>
-                                            <p class="mb-2 small">
-                                                <span :class="producto.stock_actual < 10 ? 'text-danger' : 'text-success'">
-                                                    Stock: {{ producto.stock_actual }}
-                                                </span>
-                                            </p>
-                                            <div class="d-grid gap-2">
-                                                <Link
-                                                    :href="route('productos.show', producto.id)"
-                                                    class="btn btn-outline-info btn-sm"
-                                                >
-                                                    <i class="bi bi-eye-fill me-1"></i>
-                                                    Ver Detalles
-                                                </Link>
-                                                <button
-                                                    @click="abrirModalCantidad(producto)"
-                                                    class="btn btn-primary btn-sm"
-                                                    :disabled="producto.stock_actual === 0"
-                                                >
-                                                    <i class="bi bi-cart-plus"></i>
-                                                    {{ producto.stock_actual === 0 ? 'Sin Stock' : 'Agregar al Carrito' }}
-                                                </button>
-                                            </div>
-                                                <!-- Modal para elegir cantidad al agregar al carrito -->
-                                                <ConfirmationModal :show="showCantidadModal" @close="showCantidadModal = false" max-width="sm">
-                                                    <template #title>Agregar al Carrito</template>
-                                                    <template #content>
-                                                        <div v-if="productoSeleccionado">
-                                                            <p class="mb-2">¿Cuántas unidades de <strong>{{ productoSeleccionado.nombre }}</strong> deseas agregar?</p>
-                                                            <input
-                                                                type="number"
-                                                                v-model="cantidadAgregar"
-                                                                min="1"
-                                                                :max="productoSeleccionado.stock_actual"
-                                                                class="form-control w-50"
-                                                            />
-                                                            <small class="text-muted">Stock disponible: {{ productoSeleccionado.stock_actual }}</small>
-                                                        </div>
-                                                    </template>
-                                                    <template #footer>
-                                                        <button type="button" class="btn btn-secondary" @click="showCantidadModal = false">Cancelar</button>
-                                                        <button type="button" class="btn btn-primary" @click="agregarAlCarrito" :disabled="cantidadAgregar < 1 || cantidadAgregar > (productoSeleccionado?.stock_actual || 1)">
-                                                            <i class="bi bi-cart-plus me-2"></i>Agregar
-                                                        </button>
-                                                    </template>
-                                                </ConfirmationModal>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
+                            </article>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Si no hay productos -->
-                <div v-else class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> No hay productos
-                    disponibles en este momento.
-                </div>
-            </div>
-
-            <!-- Dashboard para Propietario/Vendedor -->
-            <div v-else>
-                <h2 class="mb-4">Panel de Control</h2>
-
-                <!-- KPIs de Ventas -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted">Ventas Hoy</h6>
-                                <h2 class="mb-0">
-                                    {{ kpis?.ventas_dia || 0 }}
-                                </h2>
-                                <small class="text-success"
-                                    >Bs.
-                                    {{ formatMoney(kpis?.ingresos_dia) }}</small
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted">Ventas Semana</h6>
-                                <h2 class="mb-0">
-                                    {{ kpis?.ventas_semana || 0 }}
-                                </h2>
-                                <small class="text-success"
-                                    >Bs.
-                                    {{
-                                        formatMoney(kpis?.ingresos_semana)
-                                    }}</small
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted">Ventas Mes</h6>
-                                <h2 class="mb-0">
-                                    {{ kpis?.ventas_mes || 0 }}
-                                </h2>
-                                <small class="text-success"
-                                    >Bs.
-                                    {{ formatMoney(kpis?.ingresos_mes) }}</small
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted">Total Visitas</h6>
-                                <h2 class="mb-0">
-                                    {{ kpis?.total_visitas || 0 }}
-                                </h2>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPIs de Créditos -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-4">
-                        <div class="card text-white bg-warning">
-                            <div class="card-body">
-                                <h6>Créditos Pendientes</h6>
-                                <h3>{{ kpis?.creditos_pendientes || 0 }}</h3>
-                                <small
-                                    >Monto: Bs.
-                                    {{
-                                        formatMoney(
-                                            kpis?.monto_creditos_activos
-                                        )
-                                    }}</small
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-success">
-                            <div class="card-body">
-                                <h6>Créditos Pagados</h6>
-                                <h3>{{ kpis?.creditos_pagados || 0 }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-danger">
-                            <div class="card-body">
-                                <h6>Cuotas Vencidas</h6>
-                                <h3>{{ kpis?.cuotas_vencidas || 0 }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gráficos -->
-                <div class="row g-4">
-                    <div class="col-lg-6" v-if="ventasPorDiaData">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    Ventas de los Últimos 7 Días
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <Bar
-                                    :data="ventasPorDiaData"
-                                    :options="{
-                                        responsive: true,
-                                        maintainAspectRatio: true,
-                                    }"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-6" v-if="categoriesData">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Ventas por Categoría</h5>
-                            </div>
-                            <div class="card-body">
-                                <Doughnut
-                                    :data="categoriesData"
-                                    :options="{
-                                        responsive: true,
-                                        maintainAspectRatio: true,
-                                    }"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Productos más vendidos -->
-                <div class="row mt-4" v-if="graficos?.productos_mas_vendidos">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    Top 10 Productos Más Vendidos
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Producto</th>
-                                                <th>Código</th>
-                                                <th>Cantidad</th>
-                                                <th>Ingresos</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr
-                                                v-for="(
-                                                    producto, index
-                                                ) in graficos.productos_mas_vendidos"
-                                                :key="index"
-                                            >
-                                                <td>{{ index + 1 }}</td>
-                                                <td>{{ producto.nombre }}</td>
-                                                <td>{{ producto.codigo }}</td>
-                                                <td>
-                                                    {{ producto.total_vendido }}
-                                                </td>
-                                                <td>
-                                                    Bs.
-                                                    {{
-                                                        formatMoney(
-                                                            producto.ingresos
-                                                        )
-                                                    }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
             </div>
         </div>
-    </AppLayout>
+
+        <ConfirmationModal
+            :show="showCantidadModal"
+            @close="showCantidadModal = false"
+            max-width="sm"
+        >
+            <template #title>Agregar al carrito</template>
+            <template #content>
+                <div v-if="productoSeleccionado">
+                    <p class="mb-3 text-sm text-slate-600">
+                        ¿Cuántas unidades de
+                        <strong class="text-slate-900">{{
+                            productoSeleccionado.nombre
+                        }}</strong>
+                        deseas agregar?
+                    </p>
+                    <input
+                        v-model.number="cantidadAgregar"
+                        type="number"
+                        min="1"
+                        :max="productoSeleccionado.stock_actual"
+                        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    />
+                    <p class="mt-2 text-xs text-slate-500">
+                        Stock disponible:
+                        {{ productoSeleccionado.stock_actual }}
+                    </p>
+                </div>
+            </template>
+            <template #footer>
+                <button
+                    type="button"
+                    class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    @click="showCantidadModal = false"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="button"
+                    class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    @click="agregarAlCarrito"
+                    :disabled="
+                        cantidadAgregar < 1 ||
+                        cantidadAgregar >
+                            (productoSeleccionado?.stock_actual || 1)
+                    "
+                >
+                    Agregar
+                </button>
+            </template>
+        </ConfirmationModal>
+    </component>
 </template>

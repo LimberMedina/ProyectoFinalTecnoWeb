@@ -36,9 +36,14 @@ return [
         'api_url' => env('PAGOFACIL_API_URL', 'https://masterqr.pagofacil.com.bo/api/services/v2'),
         'tc_token_service' => env('PAGOFACIL_TC_TOKEN_SERVICE'),
         'tc_token_secret' => env('PAGOFACIL_TC_TOKEN_SECRET'),
-    'override_amount' => env('PAGOFACIL_QR_OVERRIDE_AMOUNT'),
-    'callback_url' => env('PAGOFACIL_CALLBACK_URL'),
-    'response_language' => env('PAGOFACIL_RESPONSE_LANGUAGE', 'es'),
+        'payment_method_qr' => env('PAGOFACIL_QR_PAYMENT_METHOD', 4),
+        'payment_method_qr_candidates' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('PAGOFACIL_QR_PAYMENT_METHODS', '4,1,2,3,5,6,7,8,9,10'))
+        ))),
+        'override_amount' => env('PAGOFACIL_QR_OVERRIDE_AMOUNT'),
+        'callback_url' => env('PAGOFACIL_CALLBACK_URL'),
+        'response_language' => env('PAGOFACIL_RESPONSE_LANGUAGE', 'es'),
     ],
 
 ];

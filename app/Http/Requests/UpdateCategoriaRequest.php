@@ -25,6 +25,7 @@ class UpdateCategoriaRequest extends FormRequest
                 Rule::unique('categorias', 'nombre')->ignore($categoriaId),
             ],
             'descripcion' => 'nullable|string|max:500',
+            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
 
@@ -37,6 +38,9 @@ class UpdateCategoriaRequest extends FormRequest
             'nombre.max' => 'El nombre no puede exceder :max caracteres.',
             'descripcion.string' => 'La descripción debe ser texto válido.',
             'descripcion.max' => 'La descripción no puede exceder :max caracteres.',
+            'imagen.image' => 'El archivo debe ser una imagen válida.',
+            'imagen.mimes' => 'La imagen debe ser JPG, JPEG, PNG o WEBP.',
+            'imagen.max' => 'La imagen no puede superar los 2 MB.',
         ];
     }
 
@@ -48,6 +52,7 @@ class UpdateCategoriaRequest extends FormRequest
         return [
             'nombre' => 'nombre',
             'descripcion' => 'descripción',
+            'imagen' => 'imagen',
         ];
     }
 }

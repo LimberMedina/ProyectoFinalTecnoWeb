@@ -30,7 +30,7 @@ class CreditService
 
         if (isset($filters['cliente_id'])) {
             $query->whereHas('venta', function($q) use ($filters) {
-                $q->where('cliente_id', $filters['cliente_id']);
+                $q->where('user_id', $filters['cliente_id']);
             });
         }
 
@@ -60,28 +60,37 @@ class CreditService
         $venta = \App\Models\Venta::findOrFail($saleId);
         
         // Validar elegibilidad del cliente
-        if (!$this->checkCreditEligibility($venta->cliente_id, $venta->total)) {
+        if (!$this->checkCreditEligibility($venta->user_id, $venta->total)) {
             throw new \Exception('El cliente no es elegible para crédito. Tiene cuotas vencidas o crédito activo pendiente.');
         }
 
-        // Crear el crédito
-        $credito = Credito::create([
-            'venta_id' => $saleId,
-            'monto_total' => $venta->total,
-            'monto_pagado' => 0,
-            'monto_pendiente' => $venta->total,
-            'numero_cuotas' => $creditData['numero_cuotas'],
-            'fecha_inicio' => $creditData['fecha_inicio'] ?? now(),
-            'estado' => 'activo',
-        ]);
+        $fechaInicio = $creditData['fecha_inicio'] ?? now()->toDateString();
+
+        $interestRate = $creditData['tasa_interes'] ?? 0;
 
         // Generar cuotas automáticamente
         $installmentPlan = $this->calculateInstallmentPlan(
             $venta->total,
             $creditData['numero_cuotas'],
-            0, // Sin interés
-            $creditData['fecha_inicio'] ?? now()->toDateString()
+            $interestRate,
+            $fechaInicio
         );
+
+        $ultimoVencimiento = $installmentPlan[count($installmentPlan) - 1]['fecha_vencimiento'] ?? $fechaInicio;
+
+        // Crear el crédito
+        $credito = Credito::create([
+            'venta_id' => $saleId,
+            'monto_credito' => $venta->total,
+            'interes' => 0,
+            'cuotas_total' => $creditData['numero_cuotas'],
+            'dias_mora' => 0,
+            'monto_pagado' => 0,
+            'monto_pendiente' => $venta->total,
+            'fecha_otorgamiento' => $fechaInicio,
+            'fecha_vencimiento' => $ultimoVencimiento,
+            'estado' => 'pendiente',
+        ]);
 
         $this->generateInstallments($credito->id, $installmentPlan);
 
@@ -99,12 +108,14 @@ class CreditService
      */
     public function calculateInstallmentPlan(float $totalAmount, int $numberOfInstallments, float $interestRate, string $startDate): array
     {
-        // División en cuotas iguales sin interés
-        $installmentAmount = round($totalAmount / $numberOfInstallments, 2);
+        $interestAmount = round($totalAmount * ($interestRate / 100), 2);
+        $totalWithInterest = round($totalAmount + $interestAmount, 2);
+
+        $installmentAmount = round($totalWithInterest / $numberOfInstallments, 2);
         
         // Ajustar última cuota para compensar redondeos
         $totalCalculated = $installmentAmount * ($numberOfInstallments - 1);
-        $lastInstallmentAmount = round($totalAmount - $totalCalculated, 2);
+        $lastInstallmentAmount = round($totalWithInterest - $totalCalculated, 2);
 
         $plan = [];
         $currentDate = \Carbon\Carbon::parse($startDate);
@@ -115,6 +126,7 @@ class CreditService
             $plan[] = [
                 'numero_cuota' => $i,
                 'monto' => $amount,
+                'interes_cuota' => round($interestAmount / $numberOfInstallments, 2),
                 'fecha_vencimiento' => $currentDate->copy()->addMonths($i)->toDateString(),
             ];
         }
@@ -138,6 +150,7 @@ class CreditService
                 'credito_id' => $creditId,
                 'numero_cuota' => $plan['numero_cuota'],
                 'monto' => $plan['monto'],
+                'interes_cuota' => $plan['interes_cuota'] ?? 0,
                 'monto_pagado' => 0,
                 'monto_pendiente' => $plan['monto'],
                 'fecha_vencimiento' => $plan['fecha_vencimiento'],
@@ -161,7 +174,7 @@ class CreditService
     {
         return Credito::with(['venta', 'cuotas'])
             ->whereHas('venta', function($q) use ($clientId) {
-                $q->where('cliente_id', $clientId);
+                $q->where('user_id', $clientId);
             })
             ->orderBy('created_at', 'desc')
             ->get();
@@ -240,10 +253,10 @@ class CreditService
      */
     public function checkCreditEligibility(int $clientId, float $requestedAmount): bool
     {
-        // Verificar si tiene créditos activos
+        // Verificar si tiene créditos pendientes
         $activeCredits = Credito::whereHas('venta', function($q) use ($clientId) {
-            $q->where('cliente_id', $clientId);
-        })->where('estado', 'activo')->count();
+            $q->where('user_id', $clientId);
+        })->where('estado', 'pendiente')->count();
 
         if ($activeCredits > 0) {
             return false;
@@ -251,7 +264,7 @@ class CreditService
 
         // Verificar si tiene cuotas vencidas
         $overdueCuotas = Cuota::whereHas('credito.venta', function($q) use ($clientId) {
-            $q->where('cliente_id', $clientId);
+            $q->where('user_id', $clientId);
         })->where('estado', 'vencida')->count();
 
         if ($overdueCuotas > 0) {

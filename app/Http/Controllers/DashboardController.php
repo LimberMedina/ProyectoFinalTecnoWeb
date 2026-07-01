@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MovimientoInventario;
+use App\Models\Producto;
+use App\Models\Promocion;
 use App\Services\ReportService;
 use Inertia\Inertia;
 
@@ -39,7 +42,7 @@ class DashboardController extends Controller
             $carrito = \App\Models\Carrito::where('user_id', $user->id)->first();
             $itemsCarrito = $carrito 
                 ? \App\Models\CarritoDetalle::where('carrito_id', $carrito->id)
-                    ->with('producto')
+                    ->with('variante.producto')
                     ->get()
                 : collect();
 
@@ -59,28 +62,35 @@ class DashboardController extends Controller
         }
 
         // Dashboard para Propietario y Vendedor
+        $productosActivos = Producto::where('estado', true)->count();
+        $promocionesActivas = Promocion::where('estado', true)
+            ->where('fecha_inicio', '<=', now())
+            ->where('fecha_fin', '>=', now())
+            ->count();
+        $stockCritico = Producto::where('estado', true)
+            ->whereColumn('stock_actual', '<=', 'stock_minimo')
+            ->count();
+
         $data = [
             'rol' => $user->esPropietario() ? 'propietario' : 'vendedor',
             'kpis' => [
-                'ventas_dia' => $this->reportService->ventasDia(),
+                'ventas_hoy' => $this->reportService->ventasDia(),
                 'ventas_semana' => $this->reportService->ventasSemana(),
                 'ventas_mes' => $this->reportService->ventasMes(),
-                'ingresos_dia' => $this->reportService->ingresosTotales('dia'),
+                'ingresos_hoy' => $this->reportService->ingresosTotales('dia'),
                 'ingresos_semana' => $this->reportService->ingresosTotales('semana'),
                 'ingresos_mes' => $this->reportService->ingresosTotales('mes'),
+                'productos_activos' => $productosActivos,
+                'promociones_activas' => $promocionesActivas,
                 'creditos_pendientes' => $this->reportService->creditosPendientes(),
-                'creditos_pagados' => $this->reportService->creditosPagados(),
                 'cuotas_vencidas' => $this->reportService->cuotasVencidas(),
-                'monto_creditos_activos' => $this->reportService->montoCreditos('activo'),
-                'total_visitas' => $this->reportService->totalVisitas(),
+                'stock_critico' => $stockCritico,
             ],
-            'graficos' => [
-                'ventas_por_dia' => $this->reportService->ventasPorDia(7),
-                'ventas_por_categoria' => $this->reportService->ventasPorCategoria(5),
-                'productos_mas_vendidos' => $this->reportService->productosMasVendidos(10),
-                'visitas_por_dia' => $this->reportService->visitasPorDia(7),
-                'visitas_top' => $this->reportService->visitasTop(10),
-            ],
+            'movimientosRecientes' => MovimientoInventario::with(['variante.producto'])
+                ->orderByDesc('fecha')
+                ->orderByDesc('id')
+                ->limit(8)
+                ->get(),
         ];
 
         return Inertia::render('Dashboard', $data);

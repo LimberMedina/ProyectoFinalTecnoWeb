@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
-import AppLayout from "@/Layouts/AppLayout.vue";
+import PublicStoreLayout from "@/Layouts/PublicStoreLayout.vue";
+import FlashNotification from "@/Components/FlashNotification.vue";
 import { Link, router } from "@inertiajs/vue3";
 
 const props = defineProps({
@@ -40,16 +41,16 @@ const formatMoney = (amount) => parseFloat(amount || 0).toFixed(2);
 
 const getBadgeClass = (estado) => {
     const badges = {
-        pendiente: "warning",
-        completada: "success",
-        pagado: "success",
-        enviado: "info",
-        entregado: "success",
-        anulada: "danger",
-        anulado: "danger",
-        cancelada: "secondary",
+        pendiente: "bg-yellow-100 text-yellow-800",
+        completada: "bg-emerald-100 text-emerald-800",
+        pagado: "bg-emerald-100 text-emerald-800",
+        enviado: "bg-sky-100 text-sky-800",
+        entregado: "bg-emerald-100 text-emerald-800",
+        anulada: "bg-rose-100 text-rose-800",
+        anulado: "bg-rose-100 text-rose-800",
+        cancelada: "bg-slate-100 text-slate-700",
     };
-    return `bg-${badges[estado] || "secondary"}`;
+    return badges[estado] || "bg-slate-100 text-slate-700";
 };
 
 const getMetodoPagoLabel = (metodo) => {
@@ -95,90 +96,198 @@ const visiblePages = computed(() => {
 </script>
 
 <template>
-    <AppLayout title="Mis Pedidos">
-        <div class="container py-4">
-            <!-- Encabezado -->
-            <div class="row mb-4">
-                <div class="col-lg-8">
-                    <h2 class="mb-0">Mis Pedidos</h2>
-                    <p class="text-muted">
-                        Consulta el historial de tus pedidos realizados
-                    </p>
-                </div>
-            </div>
+    <PublicStoreLayout>
+        <FlashNotification />
 
-            <!-- Pestañas de filtro: Pendientes, Pagados, Enviados, Entregados y Anulados-->
-            <ul class="nav nav-pills mb-4">
-                <li class="nav-item">
+        <div
+            class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)]"
+        >
+            <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div
+                    class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <div>
+                        <div
+                            class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-700 shadow-sm"
+                        >
+                            <span
+                                class="h-2 w-2 rounded-full bg-emerald-500"
+                            ></span>
+                            Mis pedidos
+                        </div>
+                        <h1
+                            class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                        >
+                            Mis pedidos
+                        </h1>
+                        <p
+                            class="mt-2 max-w-2xl text-sm leading-6 text-slate-600"
+                        >
+                            Consulta el historial de tus pedidos realizados.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="mb-6 flex flex-wrap gap-2">
                     <button
-                        class="nav-link"
-                        :class="{ active: filtro === 'pendiente' }"
                         @click="cambiarFiltro('pendiente')"
+                        :class="
+                            filtro === 'pendiente'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        "
+                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition"
                     >
-                        <i class="bi bi-clock-history me-2"></i>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M12 8v4l3 3"
+                            />
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M21 12A9 9 0 113 12a9 9 0 0018 0z"
+                            />
+                        </svg>
                         Pendientes
                     </button>
-                </li>
-                <li class="nav-item">
+
                     <button
-                        class="nav-link"
-                        :class="{ active: filtro === 'pagado' }"
                         @click="cambiarFiltro('pagado')"
+                        :class="
+                            filtro === 'pagado'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        "
+                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition"
                     >
-                        <i class="bi bi-check-circle me-2"></i>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M9 12l2 2 4-4"
+                            />
+                        </svg>
                         Pagados
                     </button>
-                </li>
-                <li class="nav-item">
+
                     <button
-                        class="nav-link"
-                        :class="{ active: filtro === 'enviado' }"
                         @click="cambiarFiltro('enviado')"
+                        :class="
+                            filtro === 'enviado'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        "
+                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition"
                     >
-                        <i class="bi bi-truck me-2"></i>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M3 7h2l.4 2M7 13h10l4-8H5.4"
+                            />
+                        </svg>
                         Enviados
                     </button>
-                </li>
-                <li class="nav-item">
+
                     <button
-                        class="nav-link"
-                        :class="{ active: filtro === 'entregado' }"
                         @click="cambiarFiltro('entregado')"
+                        :class="
+                            filtro === 'entregado'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        "
+                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition"
                     >
-                        <i class="bi bi-check-square me-2"></i>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M9 12l2 2 4-4"
+                            />
+                        </svg>
                         Entregados
                     </button>
-                </li>
-            </ul>
+                </div>
 
-            <!-- Tabla de pedidos -->
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
+                <!-- Lista de pedidos -->
+                <div
+                    class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                >
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500">
                                 <tr>
-                                    <th>N° Pedido</th>
-                                    <th>Fecha</th>
-                                    <th>Método de Pago</th>
-                                    <th class="text-end">Total</th>
-                                    <th class="text-center">Estado</th>
+                                    <th class="px-4 py-4">N° Pedido</th>
+                                    <th class="px-4 py-4">Fecha</th>
+                                    <th class="px-4 py-4">Método de Pago</th>
+                                    <th class="px-4 py-4 text-right">Total</th>
+                                    <th class="px-4 py-4 text-center">
+                                        Estado
+                                    </th>
                                     <th
-                                        class="text-center"
-                                        style="width: 140px"
+                                        class="px-4 py-4 text-center"
+                                        style="width: 160px"
                                     >
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="pedidos.data.length === 0">
+                                <tr
+                                    v-if="pedidos.data.length === 0"
+                                    class="border-t border-slate-100"
+                                >
                                     <td
                                         colspan="6"
-                                        class="text-center text-muted py-4"
+                                        class="px-4 py-12 text-center text-slate-500"
                                     >
-                                        <i class="bi bi-info-circle"></i> No
-                                        tienes pedidos
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="w-6 h-6 inline-block mr-2 text-slate-400"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.5"
+                                                d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+                                            />
+                                        </svg>
+                                        No tienes pedidos
                                         {{
                                             filtro === "pendiente"
                                                 ? "pendientes"
@@ -187,26 +296,43 @@ const visiblePages = computed(() => {
                                                   : filtro === "enviado"
                                                     ? "enviados"
                                                     : "entregados"
-                                        }}.<br />
-                                        <Link
-                                            :href="route('dashboard')"
-                                            class="btn btn-outline-primary mt-2"
-                                        >
-                                            <i class="bi bi-box-seam me-2"></i
-                                            >Ver productos disponibles
-                                        </Link>
+                                        }}.
+                                        <div class="mt-4">
+                                            <Link
+                                                :href="route('dashboard')"
+                                                class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    class="w-4 h-4 mr-2"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1.5"
+                                                        d="M3 7h18M3 7l3 12h12l3-12"
+                                                    />
+                                                </svg>
+                                                Ver productos disponibles
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
+
                                 <tr
                                     v-for="pedido in pedidos.data"
                                     :key="pedido.id"
+                                    class="border-t border-slate-100 hover:bg-slate-50/70"
                                 >
-                                    <td>
-                                        <strong
-                                            >#{{ pedido.numero_venta }}</strong
-                                        >
+                                    <td
+                                        class="px-4 py-4 font-semibold text-slate-900"
+                                    >
+                                        #{{ pedido.numero_venta }}
                                     </td>
-                                    <td>
+                                    <td class="px-4 py-4 text-slate-600">
                                         {{
                                             new Date(
                                                 pedido.created_at,
@@ -217,9 +343,8 @@ const visiblePages = computed(() => {
                                             })
                                         }}
                                     </td>
-                                    <td>
+                                    <td class="px-4 py-4">
                                         <span
-                                            class="badge"
                                             :class="
                                                 (pedido.metodo_pago?.nombre ||
                                                     pedido.metodo_pago) ===
@@ -227,8 +352,8 @@ const visiblePages = computed(() => {
                                                 (pedido.metodo_pago?.nombre ||
                                                     pedido.metodo_pago) ===
                                                     'credito'
-                                                    ? 'bg-info'
-                                                    : 'bg-primary'
+                                                    ? 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold bg-sky-100 text-sky-800'
+                                                    : 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800'
                                             "
                                         >
                                             {{
@@ -239,27 +364,23 @@ const visiblePages = computed(() => {
                                             }}
                                         </span>
                                     </td>
-                                    <td class="text-end">
-                                        <strong
-                                            >Bs.
-                                            {{
-                                                formatMoney(pedido.total)
-                                            }}</strong
-                                        >
+                                    <td
+                                        class="px-4 py-4 text-right font-semibold text-slate-900"
+                                    >
+                                        Bs. {{ formatMoney(pedido.total) }}
                                     </td>
-                                    <td class="text-center">
+                                    <td class="px-4 py-4 text-center">
                                         <span
-                                            class="badge"
                                             :class="
-                                                getBadgeClass(pedido.estado)
+                                                getBadgeClass(pedido.estado) +
+                                                ' inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold'
                                             "
+                                            >{{ pedido.estado }}</span
                                         >
-                                            {{ pedido.estado }}
-                                        </span>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="px-4 py-4 text-center">
                                         <div
-                                            class="d-flex gap-1 justify-content-center"
+                                            class="flex items-center justify-center gap-2"
                                         >
                                             <Link
                                                 :href="
@@ -268,12 +389,24 @@ const visiblePages = computed(() => {
                                                         pedido.id,
                                                     )
                                                 "
-                                                class="btn btn-sm btn-outline-primary"
-                                                title="Ver Detalle"
+                                                class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
                                             >
-                                                <i class="bi bi-eye"></i> Ver
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1.5"
+                                                        d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                    />
+                                                </svg>
+                                                Ver
                                             </Link>
-                                            <!-- Botón de confirmar recepción solo para pedidos enviados -->
                                             <button
                                                 v-if="
                                                     pedido.estado === 'enviado'
@@ -281,13 +414,23 @@ const visiblePages = computed(() => {
                                                 @click="
                                                     confirmarRecepcion(pedido)
                                                 "
-                                                class="btn btn-sm btn-success"
-                                                title="Confirmar Recepción"
                                                 type="button"
+                                                class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700"
                                             >
-                                                <i
-                                                    class="bi bi-check-circle"
-                                                ></i>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1.5"
+                                                        d="M5 13l4 4L19 7"
+                                                    />
+                                                </svg>
                                                 Recibido
                                             </button>
                                         </div>
@@ -296,41 +439,42 @@ const visiblePages = computed(() => {
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- Paginación -->
-                    <div
-                        v-if="pedidos.links && pedidos.links.length > 3"
-                        class="mt-4"
-                    >
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li
-                                    v-for="(link, index) in pedidos.links"
-                                    :key="index"
-                                    class="page-item"
-                                    :class="{
-                                        active: link.active,
-                                        disabled: !link.url,
-                                    }"
-                                >
-                                    <Link
-                                        v-if="link.url"
-                                        :href="link.url"
-                                        class="page-link"
-                                        v-html="link.label"
-                                        preserve-state
-                                    />
-                                    <span
-                                        v-else
-                                        class="page-link"
-                                        v-html="link.label"
-                                    ></span>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
                 </div>
-            </div>
+
+                <!-- Paginación -->
+                <div
+                    v-if="pedidos.links && pedidos.links.length > 3"
+                    class="mt-6"
+                >
+                    <nav>
+                        <ul
+                            class="flex flex-wrap items-center justify-center gap-2"
+                        >
+                            <li
+                                v-for="(link, index) in pedidos.links"
+                                :key="index"
+                            >
+                                <Link
+                                    v-if="link.url"
+                                    :href="link.url"
+                                    class="rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                    :class="
+                                        link.active
+                                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                    "
+                                    v-html="link.label"
+                                />
+                                <span
+                                    v-else
+                                    class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-400"
+                                    v-html="link.label"
+                                ></span>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </main>
         </div>
-    </AppLayout>
+    </PublicStoreLayout>
 </template>

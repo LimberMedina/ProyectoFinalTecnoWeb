@@ -59,10 +59,16 @@ class GestionPedidosController extends Controller
 
         $pedidos = $query->paginate(20);
 
+        $rol = 'cliente';
+        if ($request->user() && $request->user()->role) {
+            $rol = $request->user()->role->nombre;
+        }
+
         return Inertia::render('Pedidos/Index', [
             'pedidos' => $pedidos,
             'filtro_origen' => $origen,
             'filtro_estado' => $estado,
+            'rol' => $rol,
         ]);
     }
     
@@ -279,6 +285,7 @@ class GestionPedidosController extends Controller
                 $pagoQR = $primeraCuota->pagos->where('pago_facil_status', 'pending')->first();
                 if ($pagoQR) {
                     $qrCuota = [
+                        'pago_id' => $pagoQR->id,
                         'qr_image' => $pagoQR->pago_facil_qr_image,
                         'transaction_id' => $pagoQR->pago_facil_transaction_id,
                         'monto' => $pagoQR->monto,

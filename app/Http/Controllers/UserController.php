@@ -28,6 +28,7 @@ class UserController extends Controller
             $query->where(function($q) use ($buscar) {
                 $q->where('nombre', 'ilike', "%{$buscar}%")
                   ->orWhere('apellidos', 'ilike', "%{$buscar}%")
+                  ->orWhereRaw("LOWER(CONCAT_WS(' ', COALESCE(nombre, ''), COALESCE(apellidos, ''))) LIKE ?", ['%' . mb_strtolower($buscar) . '%'])
                   ->orWhere('ci', 'ilike', "%{$buscar}%")
                   ->orWhere('email', 'ilike', "%{$buscar}%");
             });
@@ -53,7 +54,7 @@ class UserController extends Controller
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
             'roles' => $roles,
-            'filters' => $request->only(['buscar', 'role_id', 'estado']),
+            'filters' => $request->only(['buscar', 'role_id', 'estado', 'highlight']),
             'estadisticas' => [
                 'total' => $totalUsuarios,
                 'activos' => $usuariosActivos,
@@ -82,10 +83,17 @@ class UserController extends Controller
     public function store(StoreUserRequest $request)
     {
         $data = $request->validated();
+        $fotoPerfil = $data['foto_perfil'] ?? null;
+        unset($data['foto_perfil']);
+
         $data['password'] = Hash::make($data['password']);
         $data['estado'] = $data['estado'] ?? true;
 
         $usuario = User::create($data);
+
+        if ($fotoPerfil) {
+            $usuario->updateProfilePhoto($fotoPerfil);
+        }
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario creado exitosamente.');
@@ -144,8 +152,14 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $usuario)
     {
         $data = $request->validated();
+        $fotoPerfil = $data['foto_perfil'] ?? null;
+        unset($data['foto_perfil']);
 
         $usuario->update($data);
+
+        if ($fotoPerfil) {
+            $usuario->updateProfilePhoto($fotoPerfil);
+        }
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario actualizado exitosamente.');

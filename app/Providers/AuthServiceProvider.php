@@ -19,6 +19,10 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\User::class => \App\Policies\UserPolicy::class,
         \App\Models\Carrito::class => \App\Policies\CarritoPolicy::class,
         \App\Models\Venta::class => \App\Policies\VentaPolicy::class,
+        \App\Models\Proveedor::class => \App\Policies\ProveedorPolicy::class,
+        \App\Models\Compra::class => \App\Policies\CompraPolicy::class,
+        \App\Models\MovimientoInventario::class => \App\Policies\MovimientoInventarioPolicy::class,
+        \App\Models\TecnicaInventario::class => \App\Policies\TecnicaInventarioPolicy::class,
     ];
 
     /**

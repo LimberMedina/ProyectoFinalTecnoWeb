@@ -50,7 +50,7 @@
                     <td>{{ \Carbon\Carbon::parse($venta->created_at)->format('d/m/Y H:i') }}</td>
                     <td>{{ $venta->user->name ?? 'N/A' }}</td>
                     <td>{{ $venta->vendedor->name ?? 'Sistema' }}</td>
-                    <td>{{ ucfirst($venta->metodo_pago) }}</td>
+                    <td>{{ ucfirst($venta->metodo_pago ?? optional($venta->metodoPago)->nombre ?? 'N/A') }}</td>
                     <td class="text-right">Bs. {{ number_format($venta->total, 2) }}</td>
                     <td>{{ ucfirst($venta->estado) }}</td>
                 </tr>

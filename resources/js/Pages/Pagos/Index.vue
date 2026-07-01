@@ -1,319 +1,331 @@
 <template>
     <AppLayout title="Gestión de Pagos">
-        <div class="container py-4">
-            <!-- Encabezado -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="mb-1">Gestión de Pagos</h2>
-                    <p class="text-muted mb-0">
-                        Historial de pagos registrados en el sistema
-                    </p>
+        <div
+            class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)]"
+        >
+            <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div
+                    class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <div>
+                        <div
+                            class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-700 shadow-sm"
+                        >
+                            <span
+                                class="h-2 w-2 rounded-full bg-emerald-500"
+                            ></span>
+                            Pagos
+                        </div>
+                        <h1
+                            class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                        >
+                            Gestión de pagos
+                        </h1>
+                        <p
+                            class="mt-2 max-w-2xl text-sm leading-6 text-slate-600"
+                        >
+                            Historial de pagos registrados en el sistema.
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Indicadores -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div
-                                        class="bg-primary bg-opacity-10 rounded p-3"
-                                    >
-                                        <i
-                                            class="bi bi-receipt text-primary"
-                                            style="font-size: 1.5rem"
-                                        ></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="text-muted small">
-                                        Total Pagos
-                                    </div>
-                                    <h4 class="mb-0">
-                                        {{ estadisticas.total_pagos }}
-                                    </h4>
-                                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div
+                        class="rounded-[1.5rem] border border-white bg-white/90 p-5 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="rounded-2xl bg-emerald-50 p-3 text-emerald-600"
+                            >
+                                <i class="bi bi-receipt text-3xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">
+                                    Total pagos
+                                </p>
+                                <p class="text-3xl font-black text-slate-900">
+                                    {{ estadisticas.total_pagos }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="rounded-[1.5rem] border border-white bg-white/90 p-5 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="rounded-2xl bg-sky-50 p-3 text-sky-600">
+                                <i class="bi bi-cash-stack text-3xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">
+                                    Total recaudado
+                                </p>
+                                <p class="text-3xl font-black text-slate-900">
+                                    Bs.
+                                    {{ formatMoney(estadisticas.total_monto) }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="rounded-[1.5rem] border border-white bg-white/90 p-5 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="rounded-2xl bg-amber-50 p-3 text-amber-600"
+                            >
+                                <i class="bi bi-calendar-month text-3xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">
+                                    Pagos del mes
+                                </p>
+                                <p class="text-3xl font-black text-slate-900">
+                                    Bs.
+                                    {{ formatMoney(estadisticas.pagos_mes) }}
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div
-                                        class="bg-success bg-opacity-10 rounded p-3"
-                                    >
-                                        <i
-                                            class="bi bi-cash-stack text-success"
-                                            style="font-size: 1.5rem"
-                                        ></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="text-muted small">
-                                        Total Recaudado
-                                    </div>
-                                    <h4 class="mb-0">
-                                        Bs.
-                                        {{
-                                            formatMoney(
-                                                estadisticas.total_monto
-                                            )
-                                        }}
-                                    </h4>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div
-                                        class="bg-info bg-opacity-10 rounded p-3"
-                                    >
-                                        <i
-                                            class="bi bi-calendar-month text-info"
-                                            style="font-size: 1.5rem"
-                                        ></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="text-muted small">
-                                        Pagos del Mes
-                                    </div>
-                                    <h4 class="mb-0">
-                                        Bs.
-                                        {{
-                                            formatMoney(estadisticas.pagos_mes)
-                                        }}
-                                    </h4>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Filtros -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold"
+                <section
+                    class="mt-6 rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                >
+                    <div
+                        class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end"
+                    >
+                        <div class="lg:col-span-4">
+                            <label
+                                class="mb-2 block text-sm font-semibold text-slate-700"
                                 >Buscar</label
                             >
                             <input
-                                type="text"
-                                class="form-control"
                                 v-model="form.buscar"
-                                @input="buscarConRetraso"
+                                type="text"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 placeholder="Cliente o CI..."
+                                @input="buscarConRetraso"
                             />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold"
-                                >Fecha Desde</label
+                        <div class="lg:col-span-3">
+                            <label
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                                >Fecha desde</label
                             >
                             <input
-                                type="date"
-                                class="form-control"
                                 v-model="form.fecha_desde"
+                                type="date"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 @change="aplicarFiltros"
                             />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold"
-                                >Fecha Hasta</label
+                        <div class="lg:col-span-3">
+                            <label
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                                >Fecha hasta</label
                             >
                             <input
-                                type="date"
-                                class="form-control"
                                 v-model="form.fecha_hasta"
+                                type="date"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 @change="aplicarFiltros"
                             />
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="lg:col-span-2">
                             <button
                                 @click="limpiarFiltros"
-                                class="btn btn-outline-secondary w-100"
+                                class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
-                                <i class="bi bi-x-circle me-1"></i>
+                                <i class="bi bi-x-circle"></i>
                                 Limpiar
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <!-- Tabla de Pagos -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0">Listado de Pagos</h5>
-                </div>
-                <div class="card-body p-0">
+                <section
+                    class="mt-6 rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                >
+                    <div class="mb-5 flex items-center justify-between gap-3">
+                        <h2 class="text-xl font-black text-slate-900">
+                            Listado de pagos
+                        </h2>
+                    </div>
+
                     <div
                         v-if="pagos.data.length === 0"
-                        class="text-center text-muted py-5"
+                        class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-slate-500"
                     >
-                        <i class="bi bi-inbox" style="font-size: 3rem"></i>
-                        <p class="mt-3 mb-0">No hay pagos registrados</p>
+                        <i
+                            class="bi bi-inbox mb-3 block text-4xl text-slate-300"
+                        ></i>
+                        No hay pagos registrados.
                     </div>
-                    <div v-else class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="ps-3">#</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Crédito</th>
-                                    <th>Cuota</th>
-                                    <th>Monto</th>
-                                    <th>Método Pago</th>
-                                    <th class="text-center pe-3">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="pago in pagos.data" :key="pago.id">
-                                    <td class="ps-3">
-                                        <span class="badge bg-secondary">{{
-                                            pago.id
-                                        }}</span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{
-                                            formatDate(pago.fecha)
-                                        }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold">
-                                            {{
-                                                pago.cuota?.credito?.venta
-                                                    ?.user?.name || "N/A"
-                                            }}
-                                        </div>
-                                        <small class="text-muted">
-                                            CI:
-                                            {{
-                                                pago.cuota?.credito?.venta
-                                                    ?.user?.ci || "N/A"
-                                            }}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <Link
-                                            :href="
-                                                route(
-                                                    'creditos.show',
-                                                    pago.cuota?.credito?.id
-                                                )
-                                            "
-                                            class="text-decoration-none"
-                                        >
-                                            <span class="badge bg-info">
-                                                #{{ pago.cuota?.credito?.id }}
-                                            </span>
-                                        </Link>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            {{ pago.cuota?.numero_cuota }}/{{
-                                                pago.cuota?.credito
-                                                    ?.cuotas_total
-                                            }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold text-success">
-                                            Bs. {{ formatMoney(pago.monto) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">
-                                            {{
-                                                pago.metodo_pago?.nombre ||
-                                                "Efectivo"
-                                            }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center pe-3">
-                                        <Link
-                                            :href="route('pagos.show', pago.id)"
-                                            class="btn btn-sm btn-outline-primary"
-                                            title="Ver detalles"
-                                        >
-                                            <i class="bi bi-eye"></i>
-                                        </Link>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <!-- Paginación -->
-                <div v-if="pagos.data.length > 0" class="card-footer bg-white">
                     <div
-                        class="d-flex justify-content-between align-items-center"
+                        v-else
+                        class="overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white"
                     >
-                        <div class="text-muted small">
-                            Mostrando {{ pagos.from }} a {{ pagos.to }} de
-                            {{ pagos.total }} pagos
+                        <div class="overflow-auto">
+                            <table class="min-w-full text-left text-sm">
+                                <thead
+                                    class="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-600"
+                                >
+                                    <tr>
+                                        <th class="px-4 py-4">#</th>
+                                        <th class="px-4 py-4">Fecha</th>
+                                        <th class="px-4 py-4">Cliente</th>
+                                        <th class="px-4 py-4">Crédito</th>
+                                        <th class="px-4 py-4">Cuota</th>
+                                        <th class="px-4 py-4">Monto</th>
+                                        <th class="px-4 py-4">Método pago</th>
+                                        <th class="px-4 py-4 text-center">
+                                            Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="pago in pagos.data"
+                                        :key="pago.id"
+                                        class="border-t border-slate-100"
+                                    >
+                                        <td class="px-4 py-4">
+                                            <span
+                                                class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"
+                                                >{{ pago.id }}</span
+                                            >
+                                        </td>
+                                        <td class="px-4 py-4 text-slate-700">
+                                            {{ formatDate(pago.fecha) }}
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <p
+                                                class="font-semibold text-slate-900"
+                                            >
+                                                {{
+                                                    pago.cuota?.credito?.venta
+                                                        ?.user?.name || "N/A"
+                                                }}
+                                            </p>
+                                            <p
+                                                class="mt-1 text-xs text-slate-500"
+                                            >
+                                                CI:
+                                                {{
+                                                    pago.cuota?.credito?.venta
+                                                        ?.user?.ci || "N/A"
+                                                }}
+                                            </p>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <Link
+                                                :href="
+                                                    route(
+                                                        'creditos.show',
+                                                        pago.cuota?.credito?.id,
+                                                    )
+                                                "
+                                                class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700"
+                                                >#{{
+                                                    pago.cuota?.credito?.id
+                                                }}</Link
+                                            >
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span
+                                                class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"
+                                                >{{
+                                                    pago.cuota?.numero_cuota
+                                                }}/{{
+                                                    pago.cuota?.credito
+                                                        ?.cuotas_total
+                                                }}</span
+                                            >
+                                        </td>
+                                        <td
+                                            class="px-4 py-4 font-bold text-emerald-700"
+                                        >
+                                            Bs. {{ formatMoney(pago.monto) }}
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span
+                                                class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700"
+                                                >{{
+                                                    pago.metodo_pago?.nombre ||
+                                                    "Efectivo"
+                                                }}</span
+                                            >
+                                        </td>
+                                        <td class="px-4 py-4 text-center">
+                                            <Link
+                                                :href="
+                                                    route('pagos.show', pago.id)
+                                                "
+                                                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-700 transition hover:bg-sky-100"
+                                                title="Ver detalles"
+                                                ><i class="bi bi-eye"></i
+                                            ></Link>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                <li
-                                    class="page-item"
-                                    :class="{ disabled: !pagos.prev_page_url }"
-                                >
-                                    <Link
-                                        class="page-link"
-                                        :href="pagos.prev_page_url || '#'"
-                                        preserve-state
-                                    >
-                                        Anterior
-                                    </Link>
-                                </li>
 
-                                <li
-                                    v-for="page in paginasVisibles"
-                                    :key="page"
-                                    class="page-item"
-                                    :class="{
-                                        active: page === pagos.current_page,
-                                    }"
-                                >
-                                    <Link
-                                        class="page-link"
-                                        :href="pagos.path + '?page=' + page"
-                                        preserve-state
+                        <div
+                            v-if="pagos.data.length > 0"
+                            class="flex flex-col gap-4 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div class="text-sm text-slate-600">
+                                Mostrando {{ pagos.from }} a {{ pagos.to }} de
+                                {{ pagos.total }} pagos
+                            </div>
+                            <nav>
+                                <ul class="flex flex-wrap items-center gap-2">
+                                    <li>
+                                        <Link
+                                            class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                            :href="pagos.prev_page_url || '#'"
+                                            preserve-state
+                                            >Anterior</Link
+                                        >
+                                    </li>
+                                    <li
+                                        v-for="page in paginasVisibles"
+                                        :key="page"
                                     >
-                                        {{ page }}
-                                    </Link>
-                                </li>
-
-                                <li
-                                    class="page-item"
-                                    :class="{ disabled: !pagos.next_page_url }"
-                                >
-                                    <Link
-                                        class="page-link"
-                                        :href="pagos.next_page_url || '#'"
-                                        preserve-state
-                                    >
-                                        Siguiente
-                                    </Link>
-                                </li>
-                            </ul>
-                        </nav>
+                                        <Link
+                                            v-if="page !== '...'"
+                                            class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition"
+                                            :class="
+                                                page === pagos.current_page
+                                                    ? 'border-emerald-500 bg-emerald-600 text-white'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            "
+                                            :href="pagos.path + '?page=' + page"
+                                            preserve-state
+                                            >{{ page }}</Link
+                                        >
+                                        <span
+                                            v-else
+                                            class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm font-semibold text-slate-400"
+                                            >...</span
+                                        >
+                                    </li>
+                                    <li>
+                                        <Link
+                                            class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                            :href="pagos.next_page_url || '#'"
+                                            preserve-state
+                                            >Siguiente</Link
+                                        >
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </AppLayout>
@@ -356,7 +368,7 @@ const aplicarFiltros = () => {
         {
             preserveState: true,
             preserveScroll: true,
-        }
+        },
     );
 };
 
@@ -404,18 +416,3 @@ const formatDate = (date) => {
     });
 };
 </script>
-
-<style scoped>
-.table > :not(caption) > * > * {
-    padding: 0.75rem;
-}
-
-.page-link {
-    color: #0d6efd;
-}
-
-.page-item.active .page-link {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-</style>

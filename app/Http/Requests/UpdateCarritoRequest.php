@@ -15,6 +15,7 @@ class UpdateCarritoRequest extends FormRequest
     {
         return [
             'cantidad' => 'required|integer|min:1',
+            'producto_variante_id' => 'required|exists:producto_variante,id',
         ];
     }
 
@@ -24,6 +25,8 @@ class UpdateCarritoRequest extends FormRequest
             'cantidad.required' => 'La cantidad es obligatoria.',
             'cantidad.integer' => 'La cantidad debe ser un número entero.',
             'cantidad.min' => 'La cantidad debe ser al menos 1.',
+            'producto_variante_id.exists' => 'La variante seleccionada no existe.',
+            'producto_variante_id.required' => 'La variante seleccionada es obligatoria.',
         ];
     }
 
@@ -31,6 +34,7 @@ class UpdateCarritoRequest extends FormRequest
     {
         return [
             'cantidad' => 'cantidad',
+            'producto_variante_id' => 'variante',
         ];
     }
 }

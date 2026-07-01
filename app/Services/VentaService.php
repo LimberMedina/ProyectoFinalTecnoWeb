@@ -31,16 +31,23 @@ class VentaService
         $descuentoTotal = 0;
 
         foreach ($detalles as $detalle) {
-            $subtotal += $detalle['precio_unitario'] * $detalle['cantidad'];
-            $descuentoTotal += $detalle['descuento'] * $detalle['cantidad'];
-        }
+            $cantidad = (int) ($detalle['cantidad'] ?? 0);
+            $descuentoUnitario = (float) ($detalle['descuento'] ?? 0);
+            $precioUnitario = (float) ($detalle['precio_unitario'] ?? 0);
 
-        $total = $subtotal - $descuentoTotal;
+            $subtotalBase = round($precioUnitario * $cantidad, 2);
+            $subtotalLinea = array_key_exists('subtotal', $detalle)
+                ? round((float) $detalle['subtotal'], 2)
+                : round(max(0, $subtotalBase - ($descuentoUnitario * $cantidad)), 2);
+
+            $subtotal += $subtotalLinea;
+            $descuentoTotal += round($descuentoUnitario * $cantidad, 2);
+        }
 
         return [
             'subtotal' => round($subtotal, 2),
             'descuento' => round($descuentoTotal, 2),
-            'total' => round($total, 2),
+            'total' => round($subtotal, 2),
         ];
     }
 

@@ -11,15 +11,20 @@ class PromocionService
     /**
      * Calcular el descuento aplicable a un producto
      */
-    public function calcularDescuentoProducto(Producto $producto, string $tipoCliente = 'minorista'): float
+    public function calcularDescuentoProducto(Producto $producto, string $tipoCliente = 'minorista', ?int $promocionId = null): float
     {
         $descuentoMaximo = 0;
         
         // Obtener promociones activas
         $promocionesActivas = Promocion::where('estado', true)
             ->where('fecha_inicio', '<=', Carbon::now())
-            ->where('fecha_fin', '>=', Carbon::now())
-            ->get();
+            ->where('fecha_fin', '>=', Carbon::now());
+
+        if ($promocionId) {
+            $promocionesActivas->where('id', $promocionId);
+        }
+
+        $promocionesActivas = $promocionesActivas->get();
 
         foreach ($promocionesActivas as $promocion) {
             // Verificar si aplica a este producto directamente

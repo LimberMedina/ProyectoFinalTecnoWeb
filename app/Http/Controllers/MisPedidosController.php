@@ -19,7 +19,7 @@ class MisPedidosController extends Controller
         // Filtrar por estado si se envía
         $estado = $request->input('estado', 'pendiente');
 
-        $query = Venta::with(['vendedor', 'metodoPago', 'detalles.producto'])
+        $query = Venta::with(['vendedor', 'metodoPago', 'detalles.variante.producto'])
             ->where('user_id', $user->id)
             // El cliente no debe ver pedidos anulados
             ->whereNotIn('estado', ['anulado']);
@@ -49,7 +49,7 @@ class MisPedidosController extends Controller
     {
         $user = auth()->user();
 
-        $pedido = Venta::with(['vendedor', 'metodoPago', 'detalles.producto', 'credito.cuotas'])
+        $pedido = Venta::with(['vendedor', 'metodoPago', 'detalles.variante.producto', 'credito.cuotas'])
             ->where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();

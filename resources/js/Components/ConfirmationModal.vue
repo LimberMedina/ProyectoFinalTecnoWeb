@@ -10,7 +10,7 @@ defineProps({
     },
     maxWidth: {
         type: String,
-        default: "2xl",
+        default: "sm",
     },
     closeable: {
         type: Boolean,
@@ -30,32 +30,24 @@ const close = () => {
         :closeable="closeable"
         @close="close"
     >
-        <div class="modal-header">
-            <h5 class="modal-title">
-                <slot name="title" />
-            </h5>
-            <button
-                type="button"
-                class="btn-close"
-                @click="close"
-                aria-label="Close"
-            ></button>
-        </div>
-        <div class="modal-body">
-            <div class="d-flex align-items-start">
-                <div class="flex-shrink-0">
+        <div
+            class="overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white shadow-[0_24px_80px_-30px_rgba(15,23,42,0.35)]"
+        >
+            <div
+                class="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-5"
+            >
+                <div class="flex items-center gap-3">
                     <div
-                        class="rounded-circle bg-danger bg-opacity-10 p-3 d-flex align-items-center justify-content-center"
-                        style="width: 3rem; height: 3rem"
+                        class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"
                     >
                         <svg
-                            class="text-danger"
-                            style="width: 1.5rem; height: 1.5rem"
+                            class="h-6 w-6"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
-                            stroke-width="1.5"
+                            stroke-width="1.8"
                             stroke="currentColor"
+                            aria-hidden="true"
                         >
                             <path
                                 stroke-linecap="round"
@@ -64,16 +56,55 @@ const close = () => {
                             />
                         </svg>
                     </div>
+                    <div>
+                        <p
+                            class="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-400"
+                        >
+                            Confirmación
+                        </p>
+                        <h5
+                            class="mt-1 text-base font-black text-slate-900 sm:text-lg"
+                        >
+                            <slot name="title" />
+                        </h5>
+                    </div>
                 </div>
+                <button
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    @click="close"
+                    aria-label="Cerrar"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.8"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+            </div>
 
-                <div class="ms-3">
+            <div class="px-4 py-5 sm:px-5">
+                <div
+                    class="rounded-[1.25rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600"
+                >
                     <slot name="content" />
                 </div>
             </div>
-        </div>
 
-        <div class="modal-footer bg-light">
-            <slot name="footer" />
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-5"
+            >
+                <slot name="footer" />
+            </div>
         </div>
     </Modal>
 </template>

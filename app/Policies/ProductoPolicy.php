@@ -6,34 +6,24 @@ use App\Models\Producto;
 use App\Models\User;
 use App\Models\MenuItem;
 
-/**
- * ProductoPolicy - Control de Acceso Basado en Menú Dinámico
- * 
- * Verifica permisos consultando la BD (menu_items) según el rol del usuario.
- * Implementa el Requerimiento #3: Acceso por usuario según BD.
- * 
- * Ejemplo:
- * - Propietario: Puede ver/crear/editar/eliminar productos (acceso completo)
- * - Vendedor: Solo puede ver productos (listar), NO puede crear/editar/eliminar
- * - Cliente: No tiene acceso a gestión de productos
- */
+
 class ProductoPolicy
 {
     /**
      * Ver lista de productos (Index)
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
-        // Permitir a cualquier usuario autenticado listar productos
+        // Permitir a cualquiera (autenticado o no) listar productos
         return true;
     }
 
     /**
      * Ver un producto específico
      */
-    public function view(User $user, Producto $producto): bool
+    public function view(?User $user, Producto $producto): bool
     {
-        // Permitir a cualquier usuario autenticado ver detalles de productos
+        // Permitir a cualquiera (autenticado o no) ver detalles de productos
         return true;
     }
 

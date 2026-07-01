@@ -6,6 +6,7 @@ use App\Models\Venta;
 use App\Models\Credito;
 use App\Models\Cuota;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
 use App\Models\PageVisit;
 use Illuminate\Support\Facades\DB;
 
@@ -66,23 +67,7 @@ class ReportService
         return $query->sum('total');
     }
 
-    /**
-     * Ventas agrupadas por categoría
-     */
-    public function ventasPorCategoria($limite = 5)
-    {
-        return DB::table('detalle_venta')
-            ->join('productos', 'detalle_venta.producto_id', '=', 'productos.id')
-            ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
-            ->join('ventas', 'detalle_venta.venta_id', '=', 'ventas.id')
-            ->where('ventas.estado', 'completada')
-            ->select('categorias.nombre', DB::raw('SUM(detalle_venta.cantidad) as total'))
-            ->groupBy('categorias.nombre')
-            ->orderByDesc('total')
-            ->limit($limite)
-            ->get();
-    }
-
+    
     /**
      * Productos más vendidos
      */
@@ -220,8 +205,131 @@ class ReportService
             )
             ->where('estado', 'completada')
             ->whereBetween('created_at', [now()->subDays($dias), now()])
-            ->groupBy('fecha')
+            ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('fecha', 'asc')
+            ->get();
+    }
+
+    public function ventasPorDiaPorRango($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                DB::raw("to_char(created_at, 'YYYY-MM-DD') as fecha"),
+                DB::raw('COUNT(*) as cantidad'),
+                DB::raw('SUM(total) as monto')
+            )
+            ->where('estado', 'completada')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy(DB::raw("to_char(created_at, 'YYYY-MM-DD')"))
+            ->orderBy('fecha', 'asc')
+            ->get();
+    }
+
+    /**
+     * Indicadores generales de tienda para el panel de estadísticas.
+     */
+    public function indicadoresGenerales($fechaInicio = null, $fechaFin = null)
+    {
+        $fechaInicio = $fechaInicio ?: now()->subMonth()->startOfDay();
+        $fechaFin = $fechaFin ?: now()->endOfDay();
+
+        return [
+            'ventas_totales' => Venta::where('estado', 'completada')
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->count(),
+            'ingresos_totales' => Venta::where('estado', 'completada')
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->sum('total'),
+            'ventas_hoy' => $this->ventasDia(),
+            'ingresos_mes' => $this->ingresosTotales('mes'),
+            'creditos_pendientes' => $this->creditosPendientes(),
+            'stock_critico' => Producto::where('stock_actual', '<=', 10)
+                ->where('estado', true)
+                ->count(),
+            'productos_activos' => Producto::where('estado', true)->count(),
+        ];
+    }
+
+    public function ventasPorCanal($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                'origen',
+                DB::raw('COUNT(*) as cantidad'),
+                DB::raw('SUM(total) as monto_total')
+            )
+            ->where('estado', '!=', 'pendiente')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy('origen')
+            ->get();
+    }
+
+    public function ventasPorHora($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                'origen',
+                DB::raw("date_part('hour', created_at) as hora"),
+                DB::raw('SUM(total) as monto_total')
+            )
+            ->where('estado', 'completada')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy('origen', DB::raw("date_part('hour', created_at)"))
+            ->orderBy('hora')
+            ->get();
+    }
+
+    public function ticketPromedioMensual($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                DB::raw("to_char(created_at, 'YYYY-MM') as periodo"),
+                DB::raw('AVG(total) as promedio_total'),
+                DB::raw('COUNT(*) as cantidad_ventas')
+            )
+            ->where('estado', 'completada')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy(DB::raw("to_char(created_at, 'YYYY-MM')"))
+            ->orderBy('periodo')
+            ->get();
+    }
+
+    public function ventasPorCategoria($fechaInicio, $fechaFin, $limite = 6)
+    {
+        return DB::table('detalle_venta')
+            ->join('productos', 'detalle_venta.producto_id', '=', 'productos.id')
+            ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
+            ->join('ventas', 'detalle_venta.venta_id', '=', 'ventas.id')
+            ->where('ventas.estado', 'completada')
+            ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin])
+            ->select(
+                'categorias.nombre as categoria',
+                DB::raw('SUM(detalle_venta.cantidad) as total_cantidad'),
+                DB::raw('SUM(detalle_venta.subtotal) as ingresos')
+            )
+            ->groupBy('categorias.nombre')
+            ->orderByDesc('total_cantidad')
+            ->limit($limite)
+            ->get();
+    }
+
+    public function pagosContadoCredito($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                'tipo_pago',
+                DB::raw('SUM(total) as monto_total')
+            )
+            ->where('estado', 'completada')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy('tipo_pago')
+            ->get();
+    }
+
+    public function estadoPedidos($fechaInicio, $fechaFin)
+    {
+        return Venta::select(
+                'estado',
+                DB::raw('COUNT(*) as cantidad'),
+                DB::raw('SUM(total) as monto_total')
+            )
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->groupBy('estado')
             ->get();
     }
 
@@ -230,7 +338,7 @@ class ReportService
      */
     public function ventasPorFecha($fechaInicio, $fechaFin)
     {
-        return Venta::with(['user', 'vendedor', 'detalles.producto'])
+        return Venta::with(['user', 'vendedor', 'metodoPago', 'detalles.producto'])
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->orderByDesc('created_at')
             ->get();
@@ -241,14 +349,19 @@ class ReportService
      */
     public function ventasPorMetodo($fechaInicio, $fechaFin)
     {
-        return Venta::select(
-                'metodo_pago',
-                DB::raw('COUNT(*) as cantidad'),
-                DB::raw('SUM(total) as monto_total')
+        return DB::table('metodos_pago')
+            ->leftJoin('ventas', function ($join) use ($fechaInicio, $fechaFin) {
+                $join->on('ventas.metodo_pago_id', '=', 'metodos_pago.id')
+                    ->where('ventas.estado', 'completada')
+                    ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin]);
+            })
+            ->select(
+                'metodos_pago.nombre as metodo_pago',
+                DB::raw('COUNT(ventas.id) as cantidad'),
+                DB::raw('COALESCE(SUM(ventas.total), 0) as monto_total')
             )
-            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-            ->groupBy('metodo_pago')
-            ->orderByDesc('cantidad')
+            ->groupBy('metodos_pago.id', 'metodos_pago.nombre')
+            ->orderByRaw('COALESCE(SUM(ventas.total), 0) DESC')
             ->get();
     }
 
@@ -258,11 +371,11 @@ class ReportService
     public function creditosPorEstado($fechaInicio, $fechaFin)
     {
         return Credito::with(['venta.user'])
-            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->whereBetween('fecha_otorgamiento', [$fechaInicio, $fechaFin])
             ->select(
                 'estado',
                 DB::raw('COUNT(*) as cantidad'),
-                DB::raw('SUM(monto_total) as monto_total'),
+                DB::raw('SUM(monto_credito) as monto_total'),
                 DB::raw('SUM(monto_pendiente) as monto_pendiente')
             )
             ->groupBy('estado')
@@ -281,11 +394,11 @@ class ReportService
             ->select(
                 'productos.nombre',
                 'productos.codigo',
-                'productos.stock',
+                'productos.stock_actual',
                 DB::raw('SUM(detalle_venta.cantidad) as total_vendido'),
                 DB::raw('SUM(detalle_venta.subtotal) as ingresos')
             )
-            ->groupBy('productos.id', 'productos.nombre', 'productos.codigo', 'productos.stock')
+            ->groupBy('productos.id', 'productos.nombre', 'productos.codigo', 'productos.stock_actual')
             ->orderByDesc('total_vendido')
             ->limit($limite)
             ->get();
@@ -300,12 +413,12 @@ class ReportService
             ->join('users', 'ventas.user_id', '=', 'users.id')
             ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin])
             ->select(
-                'users.name',
+                DB::raw("COALESCE(users.nombre, '') || ' ' || COALESCE(users.apellidos, '') as name"),
                 'users.email',
                 DB::raw('COUNT(ventas.id) as total_compras'),
                 DB::raw('SUM(ventas.total) as monto_total')
             )
-            ->groupBy('users.id', 'users.name', 'users.email')
+            ->groupBy('users.id', 'users.nombre', 'users.apellidos', 'users.email')
             ->orderByDesc('monto_total')
             ->limit($limite)
             ->get();
@@ -316,10 +429,9 @@ class ReportService
      */
     public function inventarioCritico($stockMinimo = 10)
     {
-        return Producto::with('categoria')
-            ->where('stock', '<=', $stockMinimo)
-            ->where('activo', true)
-            ->orderBy('stock', 'asc')
+        return ProductoVariante::with(['producto.categoria'])
+            ->where('stock_actual', '<=', $stockMinimo)
+            ->orderBy('stock_actual', 'asc')
             ->get();
     }
 }

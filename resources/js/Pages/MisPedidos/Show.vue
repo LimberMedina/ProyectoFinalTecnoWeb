@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
-import AppLayout from "@/Layouts/AppLayout.vue";
+import PublicStoreLayout from "@/Layouts/PublicStoreLayout.vue";
+import FlashNotification from "@/Components/FlashNotification.vue";
 import { Link, router } from "@inertiajs/vue3";
 import QRPayment from "@/Components/QRPayment.vue";
 
@@ -8,29 +9,29 @@ const props = defineProps({
     pedido: Object,
 });
 
-const formatMoney = (amount) => parseFloat(amount || 0).toFixed(2);
+const formatMoney = (amount) =>
+    new Intl.NumberFormat("es-BO", {
+        style: "currency",
+        currency: "BOB",
+    }).format(parseFloat(amount || 0));
 
 const getBadgeClass = (estado) => {
     const badges = {
-        pendiente: "warning",
-        completada: "success",
-        pagado: "success",
-        enviado: "info",
-        entregado: "success",
-        anulada: "danger",
-        cancelada: "secondary",
+        pendiente: "bg-yellow-100 text-yellow-800",
+        completada: "bg-emerald-100 text-emerald-800",
+        pagado: "bg-emerald-100 text-emerald-800",
+        enviado: "bg-sky-100 text-sky-800",
+        entregado: "bg-emerald-100 text-emerald-800",
+        anulada: "bg-rose-100 text-rose-800",
+        cancelada: "bg-slate-100 text-slate-700",
     };
-    return `bg-${badges[estado] || "secondary"}`;
+    return badges[estado] || "bg-slate-100 text-slate-700";
 };
 
-const totalProductos = computed(() => {
-    return props.pedido.detalles.reduce(
-        (sum, detalle) => sum + detalle.cantidad,
-        0,
-    );
-});
+const totalProductos = computed(() =>
+    props.pedido.detalles.reduce((sum, d) => sum + d.cantidad, 0),
+);
 
-// Confirmar recepción del pedido
 const confirmarRecepcion = () => {
     if (
         confirm(
@@ -45,322 +46,629 @@ const confirmarRecepcion = () => {
 </script>
 
 <template>
-    <AppLayout title="Detalle de Pedido">
-        <div class="container py-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Detalle del Pedido #{{ pedido.numero_venta }}</h2>
-                <Link
-                    :href="route('mis-pedidos.index')"
-                    class="btn btn-outline-secondary"
-                >
-                    <i class="bi bi-arrow-left"></i> Volver a Mis Pedidos
-                </Link>
-            </div>
+    <PublicStoreLayout>
+        <FlashNotification />
 
-            <div class="row g-4">
-                <!-- Información del Pedido -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Información General</h5>
+        <div
+            class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)]"
+        >
+            <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <!-- Encabezado -->
+                <div
+                    class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <div>
+                        <div
+                            class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-700 shadow-sm"
+                        >
+                            <span
+                                class="h-2 w-2 rounded-full bg-emerald-500"
+                            ></span>
+                            Mis pedidos
                         </div>
-                        <div class="card-body">
-                            <p>
-                                <strong>Número:</strong> #{{
-                                    pedido.numero_venta
-                                }}
-                            </p>
-                            <p>
-                                <strong>Fecha:</strong>
-                                {{
-                                    new Date(
-                                        pedido.created_at,
-                                    ).toLocaleDateString("es-ES", {
-                                        day: "2-digit",
-                                        month: "long",
-                                        year: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })
-                                }}
-                            </p>
-                            <p>
-                                <strong>Estado:</strong>
-                                <span
-                                    class="badge ms-2"
-                                    :class="getBadgeClass(pedido.estado)"
-                                >
-                                    {{ pedido.estado }}
-                                </span>
-                            </p>
-                            <p>
-                                <strong>Método de Pago:</strong>
-                                <span
-                                    class="badge ms-2"
-                                    :class="
-                                        pedido.metodo_pago === 'credito'
-                                            ? 'bg-info'
-                                            : 'bg-primary'
-                                    "
-                                >
-                                    {{
-                                        pedido.metodo_pago === "credito"
-                                            ? "Crédito"
-                                            : "Contado"
-                                    }}
-                                </span>
-                            </p>
-                            <p v-if="pedido.vendedor">
-                                <strong>Atendido por:</strong>
-                                {{ pedido.vendedor.nombre }}
-                                {{ pedido.vendedor.apellidos }}
-                            </p>
-                        </div>
+                        <h1
+                            class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                        >
+                            Pedido #{{ pedido.numero_venta }}
+                        </h1>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Revisa el estado y detalle de tu pedido.
+                        </p>
                     </div>
 
-                    <!-- Botón de Confirmar Recepción (solo para pedidos enviados) -->
-                    <div
-                        v-if="pedido.estado === 'enviado'"
-                        class="card mt-3 border-success"
+                    <Link
+                        :href="route('mis-pedidos.index')"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                     >
-                        <div class="card-header bg-success text-white">
-                            <i class="bi bi-truck me-2"></i>
-                            <strong>Pedido en Camino</strong>
-                        </div>
-                        <div class="card-body text-center">
-                            <div class="mb-3">
-                                <i
-                                    class="bi bi-box-seam text-success"
-                                    style="font-size: 3rem"
-                                ></i>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M15 19l-7-7 7-7"
+                            />
+                        </svg>
+                        Volver a Mis Pedidos
+                    </Link>
+                </div>
+
+                <!-- Grid principal -->
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                    <!-- Columna izquierda -->
+                    <aside class="space-y-6 lg:col-span-4">
+                        <!-- Información general -->
+                        <div
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                        >
+                            <div
+                                class="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700"
+                                    >
+                                        Pedido
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-black text-slate-900"
+                                    >
+                                        Información general
+                                    </h2>
+                                </div>
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5 text-emerald-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                    </svg>
+                                </div>
                             </div>
-                            <p class="mb-3">
-                                ¡Tu pedido está en camino!
-                                <br />
-                                <small class="text-muted">
-                                    Pronto recibirás tu pedido en la dirección
-                                    indicada.
-                                </small>
+
+                            <dl class="space-y-3 text-sm">
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">Número</dt>
+                                    <dd class="font-semibold text-slate-900">
+                                        #{{ pedido.numero_venta }}
+                                    </dd>
+                                </div>
+
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <dt class="text-slate-500">Fecha</dt>
+                                    <dd
+                                        class="text-right font-semibold text-slate-900"
+                                    >
+                                        {{
+                                            new Date(
+                                                pedido.created_at,
+                                            ).toLocaleDateString("es-ES", {
+                                                day: "2-digit",
+                                                month: "long",
+                                                year: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">Estado</dt>
+                                    <dd>
+                                        <span
+                                            :class="
+                                                getBadgeClass(pedido.estado) +
+                                                ' inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold'
+                                            "
+                                        >
+                                            {{ pedido.estado }}
+                                        </span>
+                                    </dd>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">
+                                        Método de pago
+                                    </dt>
+                                    <dd>
+                                        <span
+                                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                            :class="
+                                                pedido.metodo_pago === 'credito'
+                                                    ? 'bg-sky-100 text-sky-800'
+                                                    : 'bg-emerald-100 text-emerald-800'
+                                            "
+                                        >
+                                            {{
+                                                pedido.metodo_pago === "credito"
+                                                    ? "Crédito"
+                                                    : "Contado"
+                                            }}
+                                        </span>
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="pedido.vendedor"
+                                    class="flex items-center justify-between"
+                                >
+                                    <dt class="text-slate-500">Atendido por</dt>
+                                    <dd class="font-semibold text-slate-900">
+                                        {{ pedido.vendedor.nombre }}
+                                        {{ pedido.vendedor.apellidos }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <!-- Pedido en camino -->
+                        <div
+                            v-if="pedido.estado === 'enviado'"
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                        >
+                            <div class="mb-4 flex items-center gap-3">
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5 text-sky-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                                        />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em] text-sky-700"
+                                    >
+                                        Envío
+                                    </p>
+                                    <h2
+                                        class="mt-0.5 text-lg font-black text-slate-900"
+                                    >
+                                        Pedido en camino
+                                    </h2>
+                                </div>
+                            </div>
+
+                            <p class="mb-5 text-sm text-slate-600">
+                                Pronto recibirás tu pedido en la dirección
+                                indicada.
                             </p>
+
                             <button
                                 @click="confirmarRecepcion"
-                                class="btn btn-success"
-                                type="button"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700"
                             >
-                                <i class="bi bi-check-circle me-2"></i>
-                                Confirmar Recepción Conforme
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+                                Confirmar recepción conforme
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Pedido Entregado -->
-                    <div
-                        v-if="pedido.estado === 'entregado'"
-                        class="card mt-3 border-success"
-                    >
-                        <div class="card-header bg-success text-white">
-                            <i class="bi bi-check-square me-2"></i>
-                            <strong>Pedido Entregado</strong>
-                        </div>
-                        <div class="card-body text-center">
-                            <div class="mb-3">
-                                <i
-                                    class="bi bi-check-circle-fill text-success"
-                                    style="font-size: 3rem"
-                                ></i>
+                        <!-- Pedido entregado -->
+                        <div
+                            v-if="pedido.estado === 'entregado'"
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)] text-center"
+                        >
+                            <div
+                                class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-7 w-7 text-emerald-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
                             </div>
-                            <p class="mb-0">
-                                ¡Gracias por confirmar la recepción!
-                                <br />
-                                <small class="text-muted">
-                                    Tu pedido ha sido entregado exitosamente.
-                                </small>
+                            <p
+                                class="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700"
+                            >
+                                Completado
+                            </p>
+                            <h2 class="mt-1 text-lg font-black text-slate-900">
+                                Pedido entregado
+                            </h2>
+                            <p class="mt-2 text-sm text-slate-500">
+                                ¡Gracias por confirmar la recepción! Tu pedido
+                                ha sido entregado exitosamente.
                             </p>
                         </div>
-                    </div>
 
-                    <!-- Información de Crédito -->
-                    <div v-if="pedido.credito" class="card mt-3">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">Información de Crédito</h5>
-                        </div>
-                        <div class="card-body">
-                            <p>
-                                <strong>Monto Total:</strong> Bs.
-                                {{ formatMoney(pedido.credito.monto_total) }}
-                            </p>
-                            <p>
-                                <strong>Saldo Pendiente:</strong>
-                                <span class="text-danger"
-                                    >Bs.
-                                    {{
-                                        formatMoney(
-                                            pedido.credito.monto_pendiente,
-                                        )
-                                    }}</span
+                        <!-- Información de crédito -->
+                        <div
+                            v-if="pedido.credito"
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                        >
+                            <div
+                                class="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em] text-sky-700"
+                                    >
+                                        Crédito
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-black text-slate-900"
+                                    >
+                                        Información de crédito
+                                    </h2>
+                                </div>
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50"
                                 >
-                            </p>
-                            <p>
-                                <strong>Cuotas:</strong>
-                                {{ pedido.credito.numero_cuotas }}
-                            </p>
-                            <p>
-                                <strong>Estado:</strong>
-                                <span
-                                    class="badge"
-                                    :class="
-                                        getBadgeClass(pedido.credito.estado)
-                                    "
-                                >
-                                    {{ pedido.credito.estado }}
-                                </span>
-                            </p>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5 text-sky-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
 
-                            <!-- Listado de Cuotas -->
-                            <div v-if="pedido.credito.cuotas" class="mt-3">
-                                <h6>Cuotas:</h6>
-                                <ul class="list-group list-group-flush">
+                            <dl class="space-y-3 text-sm">
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">Monto total</dt>
+                                    <dd class="font-semibold text-slate-900">
+                                        {{
+                                            formatMoney(
+                                                pedido.credito.monto_total,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">
+                                        Saldo pendiente
+                                    </dt>
+                                    <dd class="font-semibold text-rose-600">
+                                        {{
+                                            formatMoney(
+                                                pedido.credito.monto_pendiente,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">Cuotas</dt>
+                                    <dd class="font-semibold text-slate-900">
+                                        {{ pedido.credito.numero_cuotas }}
+                                    </dd>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <dt class="text-slate-500">Estado</dt>
+                                    <dd>
+                                        <span
+                                            :class="
+                                                getBadgeClass(
+                                                    pedido.credito.estado,
+                                                ) +
+                                                ' inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold'
+                                            "
+                                        >
+                                            {{ pedido.credito.estado }}
+                                        </span>
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <!-- Cuotas -->
+                            <div
+                                v-if="pedido.credito.cuotas"
+                                class="mt-5 border-t border-slate-100 pt-5"
+                            >
+                                <p
+                                    class="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500"
+                                >
+                                    Detalle de cuotas
+                                </p>
+                                <ul class="space-y-2">
                                     <li
                                         v-for="cuota in pedido.credito.cuotas"
                                         :key="cuota.id"
-                                        class="list-group-item px-0"
+                                        class="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm"
                                     >
-                                        <div
-                                            class="d-flex justify-content-between"
-                                        >
-                                            <span>
-                                                Cuota {{ cuota.numero_cuota }}
-                                                <small class="text-muted">
-                                                    ({{
-                                                        new Date(
-                                                            cuota.fecha_vencimiento,
-                                                        ).toLocaleDateString(
-                                                            "es-ES",
-                                                        )
-                                                    }})
-                                                </small>
-                                            </span>
-                                            <strong
-                                                >Bs.
-                                                {{
-                                                    formatMoney(cuota.monto)
-                                                }}</strong
+                                        <div>
+                                            <p
+                                                class="font-semibold text-slate-800"
                                             >
+                                                Cuota {{ cuota.numero_cuota }}
+                                            </p>
+                                            <p class="text-xs text-slate-400">
+                                                {{
+                                                    new Date(
+                                                        cuota.fecha_vencimiento,
+                                                    ).toLocaleDateString(
+                                                        "es-ES",
+                                                    )
+                                                }}
+                                            </p>
                                         </div>
-                                        <span
-                                            class="badge"
-                                            :class="getBadgeClass(cuota.estado)"
-                                        >
-                                            {{ cuota.estado }}
-                                        </span>
+                                        <div class="text-right">
+                                            <p
+                                                class="font-black text-slate-900"
+                                            >
+                                                {{ formatMoney(cuota.monto) }}
+                                            </p>
+                                            <span
+                                                :class="
+                                                    getBadgeClass(
+                                                        cuota.estado,
+                                                    ) +
+                                                    ' mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold'
+                                                "
+                                            >
+                                                {{ cuota.estado }}
+                                            </span>
+                                        </div>
                                     </li>
                                 </ul>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </aside>
 
-                <!-- Productos del Pedido -->
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                Productos ({{ totalProductos }} items)
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table">
+                    <!-- Columna derecha -->
+                    <section class="space-y-6 lg:col-span-8">
+                        <!-- Tabla de productos -->
+                        <div
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                        >
+                            <div
+                                class="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700"
+                                    >
+                                        Resumen
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-black text-slate-900"
+                                    >
+                                        Productos
+                                        <span
+                                            class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600"
+                                        >
+                                            {{ totalProductos }} items
+                                        </span>
+                                    </h2>
+                                </div>
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5 text-emerald-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
                                     <thead>
-                                        <tr>
-                                            <th>Producto</th>
-                                            <th>Código</th>
-                                            <th class="text-center">
-                                                Cantidad
+                                        <tr class="border-b border-slate-100">
+                                            <th
+                                                class="pb-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-slate-400"
+                                            >
+                                                Producto
                                             </th>
-                                            <th class="text-end">
-                                                Precio Unit.
+                                            <th
+                                                class="pb-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-slate-400"
+                                            >
+                                                Código
                                             </th>
-                                            <th class="text-end">Subtotal</th>
+                                            <th
+                                                class="pb-3 text-center text-xs font-bold uppercase tracking-[0.15em] text-slate-400"
+                                            >
+                                                Cant.
+                                            </th>
+                                            <th
+                                                class="pb-3 text-right text-xs font-bold uppercase tracking-[0.15em] text-slate-400"
+                                            >
+                                                Precio unit.
+                                            </th>
+                                            <th
+                                                class="pb-3 text-right text-xs font-bold uppercase tracking-[0.15em] text-slate-400"
+                                            >
+                                                Subtotal
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr
                                             v-for="detalle in pedido.detalles"
                                             :key="detalle.id"
+                                            class="border-b border-slate-50"
                                         >
-                                            <td>
-                                                <strong>{{
-                                                    detalle.producto.nombre
-                                                }}</strong>
+                                            <td class="py-3.5">
+                                                <p
+                                                    class="font-semibold text-slate-900"
+                                                >
+                                                    {{
+                                                        detalle.variante
+                                                            ?.producto
+                                                            ?.nombre ||
+                                                        detalle.producto?.nombre
+                                                    }}
+                                                </p>
+                                                <p
+                                                    class="mt-0.5 text-xs text-slate-400"
+                                                >
+                                                    {{
+                                                        detalle.variante
+                                                            ?.talla || "—"
+                                                    }}
+                                                    /
+                                                    {{
+                                                        detalle.variante
+                                                            ?.color || "—"
+                                                    }}
+                                                </p>
                                             </td>
-                                            <td>
-                                                <code>{{
-                                                    detalle.producto.codigo
-                                                }}</code>
+                                            <td class="py-3.5">
+                                                <code
+                                                    class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-500"
+                                                >
+                                                    {{
+                                                        detalle.variante
+                                                            ?.producto
+                                                            ?.codigo ||
+                                                        detalle.producto?.codigo
+                                                    }}
+                                                </code>
                                             </td>
-                                            <td class="text-center">
+                                            <td
+                                                class="py-3.5 text-center font-semibold text-slate-700"
+                                            >
                                                 {{ detalle.cantidad }}
                                             </td>
-                                            <td class="text-end">
-                                                Bs.
+                                            <td
+                                                class="py-3.5 text-right text-slate-600"
+                                            >
                                                 {{
                                                     formatMoney(
                                                         detalle.precio_unitario,
                                                     )
                                                 }}
                                             </td>
-                                            <td class="text-end">
-                                                <strong
-                                                    >Bs.
-                                                    {{
-                                                        formatMoney(
-                                                            detalle.subtotal,
-                                                        )
-                                                    }}</strong
-                                                >
+                                            <td
+                                                class="py-3.5 text-right font-black text-emerald-700"
+                                            >
+                                                {{
+                                                    formatMoney(
+                                                        detalle.subtotal,
+                                                    )
+                                                }}
                                             </td>
                                         </tr>
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="4" class="text-end">
-                                                <strong>TOTAL:</strong>
+                                            <td
+                                                colspan="4"
+                                                class="pt-4 text-right text-sm font-semibold text-slate-500"
+                                            >
+                                                Total del pedido
                                             </td>
-                                            <td class="text-end">
-                                                <h4 class="mb-0 text-primary">
-                                                    Bs.
-                                                    {{
-                                                        formatMoney(
-                                                            pedido.total,
-                                                        )
-                                                    }}
-                                                </h4>
+                                            <td
+                                                class="pt-4 text-right text-xl font-black text-emerald-700"
+                                            >
+                                                {{ formatMoney(pedido.total) }}
                                             </td>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Código QR para Pago (si está pendiente) -->
-                <div
-                    v-if="
-                        pedido.estado === 'pendiente' &&
-                        pedido.pago_facil_qr_image
-                    "
-                    class="col-md-4"
-                >
-                    <div class="card">
-                        <div class="card-header bg-warning text-dark">
-                            <h5 class="mb-0">
-                                <i class="bi bi-qr-code me-2"></i>
-                                Pagar Pedido
-                            </h5>
-                        </div>
-                        <div class="card-body">
+                        <!-- QR de pago -->
+                        <div
+                            v-if="
+                                pedido.estado === 'pendiente' &&
+                                pedido.pago_facil_qr_image
+                            "
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                        >
+                            <div
+                                class="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700"
+                                    >
+                                        Pago
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-black text-slate-900"
+                                    >
+                                        Escanea para pagar
+                                    </h2>
+                                </div>
+                                <div
+                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5 text-emerald-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+
                             <QRPayment
                                 :qr-image="pedido.pago_facil_qr_image"
                                 :transaction-id="
@@ -374,89 +682,98 @@ const confirmarRecepcion = () => {
                                 :check-interval="5000"
                             />
                         </div>
-                    </div>
-                </div>
 
-                <!-- Estado del Pedido (si ya está pagado o enviado) -->
-                <div
-                    v-else-if="
-                        pedido.estado === 'pagado' ||
-                        pedido.estado === 'enviado'
-                    "
-                    class="col-md-4"
-                >
-                    <div class="card">
+                        <!-- Estado: pagado o enviado -->
                         <div
-                            class="card-header"
-                            :class="
+                            v-else-if="
+                                pedido.estado === 'pagado' ||
                                 pedido.estado === 'enviado'
-                                    ? 'bg-success text-white'
-                                    : 'bg-info text-white'
                             "
+                            class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
                         >
-                            <h5 class="mb-0">
-                                <i
-                                    class="bi"
+                            <div
+                                class="flex flex-col items-center gap-3 text-center"
+                            >
+                                <div
+                                    class="flex h-14 w-14 items-center justify-center rounded-2xl"
                                     :class="
                                         pedido.estado === 'enviado'
-                                            ? 'bi-truck'
-                                            : 'bi-clock-history'
+                                            ? 'bg-sky-50'
+                                            : 'bg-emerald-50'
                                     "
-                                ></i>
-                                {{
-                                    pedido.estado === "enviado"
-                                        ? "Pedido en Camino"
-                                        : "Esperando Confirmación"
-                                }}
-                            </h5>
-                        </div>
-                        <div class="card-body text-center p-4">
-                            <i
-                                class="bi"
-                                :class="
-                                    pedido.estado === 'enviado'
-                                        ? 'bi-truck'
-                                        : 'bi-check-circle-fill'
-                                "
-                                style="font-size: 4rem"
-                                :style="{
-                                    color:
-                                        pedido.estado === 'enviado'
-                                            ? '#28a745'
-                                            : '#17a2b8',
-                                }"
-                            ></i>
-                            <h5 class="mt-3">
-                                {{
-                                    pedido.estado === "enviado"
-                                        ? "¡Tu pedido está en camino!"
-                                        : "¡Pago Confirmado!"
-                                }}
-                            </h5>
-                            <p class="text-muted">
-                                {{
-                                    pedido.estado === "enviado"
-                                        ? "Pronto recibirás tu pedido en la dirección indicada."
-                                        : "Tu pago ha sido confirmado. Pronto tu pedido será enviado."
-                                }}
-                            </p>
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-7 w-7"
+                                        :class="
+                                            pedido.estado === 'enviado'
+                                                ? 'text-sky-600'
+                                                : 'text-emerald-600'
+                                        "
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                </div>
 
-                            <div
-                                v-if="pedido.direccion_entrega"
-                                class="alert alert-light text-start mt-3"
-                            >
-                                <h6 class="mb-2">
-                                    <i class="bi bi-geo-alt me-2"></i>
-                                    Dirección de Entrega:
-                                </h6>
-                                <p class="mb-0 small">
-                                    {{ pedido.direccion_entrega }}
-                                </p>
+                                <div>
+                                    <p
+                                        class="text-xs font-bold uppercase tracking-[0.22em]"
+                                        :class="
+                                            pedido.estado === 'enviado'
+                                                ? 'text-sky-700'
+                                                : 'text-emerald-700'
+                                        "
+                                    >
+                                        {{
+                                            pedido.estado === "enviado"
+                                                ? "Envío"
+                                                : "Pago"
+                                        }}
+                                    </p>
+                                    <h2
+                                        class="mt-1 text-xl font-black text-slate-900"
+                                    >
+                                        {{
+                                            pedido.estado === "enviado"
+                                                ? "¡Tu pedido está en camino!"
+                                                : "¡Pago confirmado!"
+                                        }}
+                                    </h2>
+                                    <p class="mt-2 text-sm text-slate-500">
+                                        {{
+                                            pedido.estado === "enviado"
+                                                ? "Pronto recibirás tu pedido en la dirección indicada."
+                                                : "Tu pago ha sido confirmado. Pronto tu pedido será enviado."
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-if="pedido.direccion_entrega"
+                                    class="mt-2 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-left"
+                                >
+                                    <p
+                                        class="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400"
+                                    >
+                                        Dirección de entrega
+                                    </p>
+                                    <p class="text-sm text-slate-700">
+                                        {{ pedido.direccion_entrega }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
-            </div>
+            </main>
         </div>
-    </AppLayout>
+    </PublicStoreLayout>
 </template>

@@ -1,5 +1,6 @@
-import { ref, computed, onMounted } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from "vue";
+import { router } from "@inertiajs/vue3";
+import { showToast } from "@/utils/toast";
 
 const cartItems = ref([]);
 const isLoading = ref(false);
@@ -24,14 +25,14 @@ export function useCart() {
 
         if (isAuthenticated.value) {
             try {
-                const response = await fetch('/carrito');
+                const response = await fetch("/carrito");
                 const data = await response.json();
                 cartItems.value = data.items || [];
             } catch (error) {
-                console.error('Error cargando carrito:', error);
+                console.error("Error cargando carrito:", error);
             }
         } else {
-            const localCart = localStorage.getItem('cart');
+            const localCart = localStorage.getItem("cart");
             cartItems.value = localCart ? JSON.parse(localCart) : [];
         }
 
@@ -41,74 +42,93 @@ export function useCart() {
     // Guardar en localStorage
     const saveLocalCart = () => {
         if (!isAuthenticated.value) {
-            localStorage.setItem('cart', JSON.stringify(cartItems.value));
+            localStorage.setItem("cart", JSON.stringify(cartItems.value));
         }
     };
 
     // Agregar producto al carrito
-    const addToCart = async (productoId, cantidad = 1) => {
+    const addToCart = async (productoVarianteId, cantidad = 1) => {
         isAddingToCart.value = true;
 
         try {
             if (isAuthenticated.value) {
-                const response = await fetch('/carrito/add', {
-                    method: 'POST',
+                const response = await fetch("/carrito/add", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector(
+                            'meta[name="csrf-token"]',
+                        ).content,
                     },
-                    body: JSON.stringify({ producto_id: productoId, cantidad })
+                    body: JSON.stringify({
+                        producto_variante_id: productoVarianteId,
+                        cantidad,
+                    }),
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
                     cartItems.value = data.items || [];
-                    showNotification('Producto agregado al carrito');
+                    showToast("Producto agregado al carrito.", "success");
                 } else {
-                    alert(data.error || 'Error al agregar producto');
+                    showToast(
+                        data.error || "No se pudo agregar el producto.",
+                        "error",
+                    );
                 }
             } else {
                 // Modo localStorage
-                const existingItem = cartItems.value.find(item => item.producto_id === productoId);
-                
+                const existingItem = cartItems.value.find(
+                    (item) => item.producto_variante_id === productoVarianteId,
+                );
+
                 if (existingItem) {
                     existingItem.cantidad += cantidad;
                 } else {
-                    // Necesitarías obtener info del producto desde la página
+                    // Necesitarías obtener info de la variante desde la página
                     cartItems.value.push({
                         id: Date.now(),
-                        producto_id: productoId,
-                        cantidad: cantidad
+                        producto_variante_id: productoVarianteId,
+                        cantidad: cantidad,
                     });
                 }
 
                 saveLocalCart();
-                showNotification('Producto agregado al carrito');
+                showToast("Producto agregado al carrito.", "success");
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error al agregar producto');
+            console.error("Error:", error);
+            showToast("No se pudo agregar el producto.", "error");
         } finally {
             isAddingToCart.value = false;
         }
     };
 
     // Actualizar cantidad
-    const updateQuantity = async (itemId, nuevaCantidad) => {
+    const updateQuantity = async (
+        itemId,
+        nuevaCantidad,
+        productoVarianteId = null,
+    ) => {
         const cantidad = parseInt(nuevaCantidad);
-        
+
         if (cantidad < 1) return;
 
         if (isAuthenticated.value) {
             try {
                 const response = await fetch(`/carrito/${itemId}`, {
-                    method: 'PUT',
+                    method: "PUT",
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector(
+                            'meta[name="csrf-token"]',
+                        ).content,
                     },
-                    body: JSON.stringify({ cantidad })
+                    body: JSON.stringify({
+                        cantidad,
+                        producto_variante_id: productoVarianteId,
+                    }),
                 });
 
                 const data = await response.json();
@@ -116,13 +136,17 @@ export function useCart() {
                 if (response.ok) {
                     cartItems.value = data.items || [];
                 } else {
-                    alert(data.error || 'Error al actualizar cantidad');
+                    showToast(
+                        data.error || "Error al actualizar cantidad",
+                        "error",
+                    );
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error("Error:", error);
+                showToast("Error al actualizar cantidad.", "error");
             }
         } else {
-            const item = cartItems.value.find(i => i.id === itemId);
+            const item = cartItems.value.find((i) => i.id === itemId);
             if (item) {
                 item.cantidad = cantidad;
                 saveLocalCart();
@@ -135,89 +159,85 @@ export function useCart() {
         if (isAuthenticated.value) {
             try {
                 const response = await fetch(`/carrito/${itemId}`, {
-                    method: 'DELETE',
+                    method: "DELETE",
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
+                        "X-CSRF-TOKEN": document.querySelector(
+                            'meta[name="csrf-token"]',
+                        ).content,
+                    },
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
                     cartItems.value = data.items || [];
+                    showToast("Producto eliminado del carrito.", "success");
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error("Error:", error);
+                showToast("No se pudo eliminar el producto.", "error");
             }
         } else {
-            cartItems.value = cartItems.value.filter(item => item.id !== itemId);
+            cartItems.value = cartItems.value.filter(
+                (item) => item.id !== itemId,
+            );
             saveLocalCart();
         }
     };
 
     // Vaciar carrito
     const clearCart = async () => {
-        if (!confirm('¿Estás seguro de vaciar el carrito?')) return;
+        if (!confirm("¿Estás seguro de vaciar el carrito?")) return;
 
         if (isAuthenticated.value) {
             try {
-                await fetch('/carrito', {
-                    method: 'DELETE',
+                await fetch("/carrito", {
+                    method: "DELETE",
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
+                        "X-CSRF-TOKEN": document.querySelector(
+                            'meta[name="csrf-token"]',
+                        ).content,
+                    },
                 });
 
                 cartItems.value = [];
+                showToast("Carrito vaciado con éxito.", "success");
             } catch (error) {
-                console.error('Error:', error);
+                console.error("Error:", error);
+                showToast("No se pudo vaciar el carrito.", "error");
             }
         } else {
             cartItems.value = [];
-            localStorage.removeItem('cart');
+            localStorage.removeItem("cart");
+            showToast("Carrito vaciado con éxito.", "success");
         }
     };
 
     // Sincronizar carrito al iniciar sesión
     const syncCart = async () => {
-        const localCart = localStorage.getItem('cart');
-        
+        const localCart = localStorage.getItem("cart");
+
         if (!localCart || !isAuthenticated.value) return;
 
         try {
             const items = JSON.parse(localCart);
-            
-            await fetch('/carrito/sync', {
-                method: 'POST',
+
+            await fetch("/carrito/sync", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector(
+                        'meta[name="csrf-token"]',
+                    ).content,
                 },
-                body: JSON.stringify({ items })
+                body: JSON.stringify({ items }),
             });
 
-            localStorage.removeItem('cart');
+            localStorage.removeItem("cart");
             await loadCart();
         } catch (error) {
-            console.error('Error sincronizando carrito:', error);
+            console.error("Error sincronizando carrito:", error);
         }
-    };
-
-    // Mostrar notificación
-    const showNotification = (message) => {
-        // Podrías usar un toast más sofisticado
-        const toast = document.createElement('div');
-        toast.className = 'position-fixed bottom-0 end-0 p-3';
-        toast.style.zIndex = '11';
-        toast.innerHTML = `
-            <div class="toast show" role="alert">
-                <div class="toast-body bg-success text-white rounded">
-                    ${message}
-                </div>
-            </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
     };
 
     onMounted(() => {
@@ -235,6 +255,6 @@ export function useCart() {
         updateQuantity,
         removeFromCart,
         clearCart,
-        syncCart
+        syncCart,
     };
 }

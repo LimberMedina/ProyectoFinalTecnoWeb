@@ -6,12 +6,14 @@ skinparam ArrowFontSize 10
 skinparam shadowing false
 skinparam roundcorner 12
 
-title cmp Diagrama de Navegacion - Actor Propietario
+title cmp Diagrama de Navegacion - Actor Propietario (Completo)
 
 ' COLORES
 !define CLIENT #D6EAF8
 !define SERVER #FDEBD0
 !define FORM   #FCF3CF
+!define CONFIG #D5F4E6
+!define AUDIT  #FADBD8
 
 ' =====================================================================
 ' DASHBOARD
@@ -47,6 +49,39 @@ rectangle "Productos/Create\n<<Form>>\n----\nnombre: Input Element\nprecio_venta
 rectangle "Productos/Show\n<<Client Page>>\n----\nproducto: Object\ncategoria: Object\npromociones: List" as ProductosShow CLIENT
 
 rectangle "Productos/Edit\n<<Form>>\n----\nnombre: Input Element\nprecio_venta: Input Element\ncategoria_id: Select Element\nstock_actual: Input Element\nimagen: Input Element" as ProductosEdit FORM
+
+' =====================================================================
+' COMPRAS, PROVEEDORES E INVENTARIOS
+' =====================================================================
+rectangle "ProveedorController\n<<Server Page>>\n----\nid: int\nsearch: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as ProveedorCtrl SERVER
+
+rectangle "Proveedores/Index\n<<Client Page>>\n----\nproveedores: List\nfilters: Object" as ProveedoresIndex CLIENT
+
+rectangle "Proveedores/Create\n<<Form>>\n----\nnombre: Input Element\ncontacto: Input Element\ntelefono: Input Element\nemail: Input Element\ndireccion: Text Area Element" as ProveedoresCreate FORM
+
+rectangle "Proveedores/Show\n<<Client Page>>\n----\nproveedor: Object\ncompras: List" as ProveedoresShow CLIENT
+
+rectangle "Proveedores/Edit\n<<Form>>\n----\nnombre: Input Element\ncontacto: Input Element\ntelefono: Input Element\nemail: Input Element\ndireccion: Text Area Element" as ProveedoresEdit FORM
+
+rectangle "CompraController\n<<Server Page>>\n----\nid: int\nproveedor_id: int\nestado: text\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as CompraCtrl SERVER
+
+rectangle "Compras/Index\n<<Client Page>>\n----\ncompras: List\nproveedores: List\nfilters: Object" as ComprasIndex CLIENT
+
+rectangle "Compras/Create\n<<Form>>\n----\nproveedor_id: Select Element\nproductos: List\ncantidad: Input Element\nprecio_unitario: Input Element\nfecha_compra: Input Element" as ComprasCreate FORM
+
+rectangle "Compras/Show\n<<Client Page>>\n----\ncompra: Object\ndetalles: List\nproveedor: Object" as ComprasShow CLIENT
+
+rectangle "Compras/Edit\n<<Form>>\n----\nestado: Select Element\nobservaciones: Text Area Element" as ComprasEdit FORM
+
+rectangle "InventarioController\n<<Server Page>>\n----\nid: int\nproducto_id: int\nlote_id: int\nindex(): Object\nshow(): Object\nregistrarEntrada(): void\nregistrarSalida(): void\najustarStock(): void" as InventarioCtrl SERVER
+
+rectangle "Inventarios/Index\n<<Client Page>>\n----\nproductos: List\nlotes: List\nmovimientos: List\nkardex: Object" as InventariosIndex CLIENT
+
+rectangle "Inventarios/Show\n<<Client Page>>\n----\nproducto: Object\nlote: Object\nmovimientos: List\nkardex: List" as InventariosShow CLIENT
+
+rectangle "LoteInventario/Form\n<<Form>>\n----\nproducto_id: Select Element\ncantidad_inicial: Input Element\nfecha_vencimiento: Input Element\nprecio_compra: Input Element" as LoteForm FORM
+
+rectangle "Movimientos/Registrar\n<<Form>>\n----\ntipo_movimiento: Select Element\nproducto_id: Select Element\ncantidad: Input Element\nmotivo: Text Area Element" as MovimientoForm FORM
 
 ' =====================================================================
 ' CATEGORÍAS (CRUD COMPLETO)
@@ -147,6 +182,102 @@ rectangle "Reportes/Index\n<<Client Page>>\n----" as ReportesIndex CLIENT
 rectangle "Reportes/Show\n<<Form>>\n----\ntipo: text\nfecha_inicio: Input Element\nfecha_fin: Input Element" as ReportesShow FORM
 
 ' =====================================================================
+' TÉCNICAS DE INVENTARIO (CRUD)
+' =====================================================================
+rectangle "TecnicaInventarioController\n<<Server Page>>\n----\nid: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as TecnicaInventarioCtrl SERVER
+
+rectangle "TecnicasInventario/Index\n<<Client Page>>\n----\ntecnicas: List\ncodigos: List" as TecnicasInventarioIndex CLIENT
+
+rectangle "TecnicasInventario/Create\n<<Form>>\n----\nnombre: Input Element\ncodigo: Input Element\ndescripcion: Text Area Element\nestado: Select Element" as TecnicasInventarioCreate FORM
+
+rectangle "TecnicasInventario/Show\n<<Client Page>>\n----\ntecnica: Object\nproductos_asociados: List" as TecnicasInventarioShow CLIENT
+
+rectangle "TecnicasInventario/Edit\n<<Form>>\n----\nnombre: Input Element\ncodigo: Input Element\ndescripcion: Text Area Element\nestado: Select Element" as TecnicasInventarioEdit FORM
+
+' =====================================================================
+' TÉCNICAS DE COSTO (CRUD)
+' =====================================================================
+rectangle "TecnicaCostoController\n<<Server Page>>\n----\nid: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as TecnicaCostoCtrl SERVER
+
+rectangle "TecnicasCosto/Index\n<<Client Page>>\n----\ntecnicas: List\nmetodos: List" as TecnicasCostoIndex CLIENT
+
+rectangle "TecnicasCosto/Create\n<<Form>>\n----\nnombre: Input Element\ncodigo: Input Element\ndescripcion: Text Area Element\nestado: Select Element" as TecnicasCostoCreate FORM
+
+rectangle "TecnicasCosto/Show\n<<Client Page>>\n----\ntecnica: Object\nproductos_asociados: List" as TecnicasCostoShow CLIENT
+
+rectangle "TecnicasCosto/Edit\n<<Form>>\n----\nnombre: Input Element\ncodigo: Input Element\ndescripcion: Text Area Element\nestado: Select Element" as TecnicasCostoEdit FORM
+
+' =====================================================================
+' GESTIÓN DE LOTES DE INVENTARIO (CRUD)
+' =====================================================================
+rectangle "LoteInventarioController\n<<Server Page>>\n----\nid: int\nproducto_id: int\nindex(): List\ncreate(): Object\nstore(): void\nshow(): Object\nedit(): Object\nupdate(): void\ndestroy(): void" as LoteCtrl SERVER
+
+rectangle "Lotes/Index\n<<Client Page>>\n----\nlotes: List\nproductos: List\nfiltros: Object" as LotesIndex CLIENT
+
+rectangle "Lotes/Create\n<<Form>>\n----\nproducto_variante_id: Select Element\ncantidad_inicial: Input Element\nfecha_ingreso: Input Element\nfecha_vencimiento: Input Element\ncosto_unitario: Input Element" as LotesCreate FORM
+
+rectangle "Lotes/Show\n<<Client Page>>\n----\nlote: Object\nproducto_variante: Object\ncantidad_disponible: int\nhistorial_salidas: List" as LotesShow CLIENT
+
+rectangle "Lotes/Edit\n<<Form>>\n----\nfecha_vencimiento: Input Element\nobservaciones: Text Area Element" as LotesEdit FORM
+
+' =====================================================================
+' SALIDAS DE LOTES (REGISTRO DE VENTAS POR LOTE)
+' =====================================================================
+rectangle "SalidaLoteController\n<<Server Page>>\n----\nid: int\nventa_id: int\nlote_id: int\nindex(): List\nshow(): Object\nregistrarSalida(): void" as SalidaLoteCtrl SERVER
+
+rectangle "Salidas/Index\n<<Client Page>>\n----\nsalidas: List\nlotes: List\nfecha_inicio: date\nfecha_fin: date" as SalidasIndex CLIENT
+
+rectangle "Salidas/Show\n<<Client Page>>\n----\nsalida: Object\nlote: Object\nventa: Object\ncosto_aplicado: numeric\ncantidad_salida: int" as SalidasShow CLIENT
+
+rectangle "Salidas/Registrar\n<<Form>>\n----\nventa_id: Select Element\nlote_id: Select Element\ncantidad: Input Element\ncosto_unitario: Input Element" as SalidasRegistrar FORM
+
+' =====================================================================
+' KARDEX DE INVENTARIO (CONSULTA)
+' =====================================================================
+rectangle "KardexController\n<<Server Page>>\n----\nid: int\nproducto_id: int\nindex(): Object\nshow(): Object\nreporte_movimientos(): Object\nreporte_costos(): Object" as KardexCtrl SERVER
+
+rectangle "Kardex/Index\n<<Client Page>>\n----\nproductos: List\nmovimientos: List\ntotales: Object" as KardexIndex CLIENT
+
+rectangle "Kardex/Show\n<<Client Page>>\n----\nproducto: Object\nmovimientos_detalle: List\nsaldo_actual: numeric\ncosto_promedio: numeric" as KardexShow CLIENT
+
+rectangle "Kardex/Reporte\n<<Client Page>>\n----\nfecha_inicio: date\nfecha_fin: date\ntipo_movimiento: Select Element\ntotales_periodo: Object" as KardexReporte CLIENT
+
+' =====================================================================
+' MOVIMIENTOS DE INVENTARIO
+' =====================================================================
+rectangle "MovimientoInventarioController\n<<Server Page>>\n----\nid: int\nindex(): List\nshow(): Object\nregistrar(): void" as MovimientoCtrl SERVER
+
+rectangle "Movimientos/Index\n<<Client Page>>\n----\nmovimientos: List\nfiltros: Object" as MovimientosIndex CLIENT
+
+rectangle "Movimientos/Show\n<<Client Page>>\n----\nmovimiento: Object\nproducto: Object\ntecnica_inventario: Object\ntecnica_costo: Object" as MovimientosShow CLIENT
+
+' =====================================================================
+' CONFIGURACIONES (AJUSTES VISUALES Y DEL SISTEMA)
+' =====================================================================
+rectangle "ConfiguracionController\n<<Server Page>>\n----\nindex(): Object\nupdate(): void\nsaveTheme(): void\ngetThemes(): List" as ConfigCtrl SERVER
+
+rectangle "Configuraciones/Index\n<<Client Page>>\n----\nconfig: Object\ntemas_disponibles: List\nmodo_actual: text" as ConfigIndex CONFIG
+
+rectangle "Configuraciones/Tema\n<<Form>>\n----\ntema_color: Select Element\nmodo_oscuro: Toggle\npaleta_colores: Select Element\nfuente: Select Element\ntamanio_fuente: Select Element" as ConfigTema CONFIG
+
+rectangle "Configuraciones/Sistema\n<<Form>>\n----\nnombre_empresa: Input Element\nlogo: Input Element\ndirector: Text Area Element\nmoneda: Select Element" as ConfigSistema CONFIG
+
+rectangle "Configuraciones/Notificaciones\n<<Form>>\n----\nalerta_stock_bajo: Toggle\nalerta_vencimiento: Toggle\nalerta_pedidos: Toggle" as ConfigNotif CONFIG
+
+' =====================================================================
+' BITÁCORA / AUDITORÍA (HISTORIAL DE ACTIVIDADES)
+' =====================================================================
+rectangle "BitacoraController\n<<Server Page>>\n----\nid: int\nusuario_id: int\nindex(): List\nshow(): Object\nfiltrar(): Object\nexportar(): PDF" as BitacoraCtrl SERVER
+
+rectangle "Bitacora/Index\n<<Client Page>>\n----\nactividades: List\nfiltros: Object\nusuarios: List" as BitacoraIndex AUDIT
+
+rectangle "Bitacora/Show\n<<Client Page>>\n----\nactividad: Object\nusuario: Object\nfecha_hora: datetime\ndetalles_cambios: Object" as BitacoraShow AUDIT
+
+rectangle "Bitacora/Filtrar\n<<Form>>\n----\nusuario_id: Select Element\ntipo_actividad: Select Element\nfecha_inicio: Input Element\nfecha_fin: Input Element\nmodulo: Select Element" as BitacoraFiltrar AUDIT
+
+rectangle "Bitacora/Exportar\n<<Client Page>>\n----\nformato: Select Element\nperiodo: date\nentidades: List" as BitacoraExportar AUDIT
+
+' =====================================================================
 ' RELACIONES DE NAVEGACIÓN
 ' =====================================================================
 
@@ -176,6 +307,38 @@ ProductosEdit --> ProductoCtrl : <<submit>> Actualizar
 ProductoCtrl --> ProductosShow : <<redirect>>
 ProductosShow --> ProductoCtrl : <<submit>> Eliminar
 ProductoCtrl --> ProductosIndex : <<redirect>>
+
+' -- Proveedores y Compras --
+Dashboard --> ProveedorCtrl : <<link>> Proveedores
+ProveedorCtrl --> ProveedoresIndex : <<build>>
+ProveedoresIndex --> ProveedoresCreate : <<link>>
+ProveedoresCreate --> ProveedorCtrl : <<submit>> Guardar
+ProveedorCtrl --> ProveedoresIndex : <<redirect>>
+ProveedoresIndex --> ProveedoresShow : <<link>>
+ProveedoresShow --> ProveedoresEdit : <<link>>
+ProveedoresEdit --> ProveedorCtrl : <<submit>> Actualizar
+ProveedorCtrl --> ProveedoresShow : <<redirect>>
+
+Dashboard --> CompraCtrl : <<link>> Compras
+CompraCtrl --> ComprasIndex : <<build>>
+ComprasIndex --> ComprasCreate : <<link>>
+ComprasCreate --> CompraCtrl : <<submit>> Guardar
+CompraCtrl --> ComprasIndex : <<redirect>>
+ComprasIndex --> ComprasShow : <<link>>
+ComprasShow --> ComprasEdit : <<link>>
+ComprasEdit --> CompraCtrl : <<submit>> Actualizar
+CompraCtrl --> ComprasShow : <<redirect>>
+
+' -- Inventarios --
+Dashboard --> InventarioCtrl : <<link>> Inventarios
+InventarioCtrl --> InventariosIndex : <<build>>
+InventariosIndex --> LoteForm : <<link>> Nuevo Lote
+LoteForm --> InventarioCtrl : <<submit>> Registrar Lote
+InventarioCtrl --> InventariosIndex : <<redirect>>
+InventariosIndex --> InventariosShow : <<link>>
+InventariosShow --> MovimientoForm : <<link>> Registrar Movimiento
+MovimientoForm --> InventarioCtrl : <<submit>> Guardar Movimiento
+InventarioCtrl --> InventariosShow : <<redirect>>
 
 ' -- Categorías CRUD --
 Dashboard --> CategoriaCtrl : <<link>> Categorías
@@ -265,11 +428,97 @@ ReportesIndex --> ReportesShow : <<link>>
 ReportesShow --> ReportCtrl : <<submit>> Generar
 ReportCtrl --> ReportesShow : <<build>>
 
+' -- Técnicas de Inventario CRUD --
+Dashboard --> TecnicaInventarioCtrl : <<link>> Técnicas Inventario
+TecnicaInventarioCtrl --> TecnicasInventarioIndex : <<build>>
+TecnicasInventarioIndex --> TecnicasInventarioCreate : <<link>>
+TecnicasInventarioCreate --> TecnicaInventarioCtrl : <<submit>> Guardar
+TecnicaInventarioCtrl --> TecnicasInventarioIndex : <<redirect>>
+TecnicasInventarioIndex --> TecnicasInventarioShow : <<link>>
+TecnicasInventarioShow --> TecnicasInventarioEdit : <<link>>
+TecnicasInventarioEdit --> TecnicaInventarioCtrl : <<submit>> Actualizar
+TecnicaInventarioCtrl --> TecnicasInventarioShow : <<redirect>>
+TecnicasInventarioShow --> TecnicaInventarioCtrl : <<submit>> Eliminar
+TecnicaInventarioCtrl --> TecnicasInventarioIndex : <<redirect>>
+
+' -- Técnicas de Costo CRUD --
+Dashboard --> TecnicaCostoCtrl : <<link>> Técnicas Costo
+TecnicaCostoCtrl --> TecnicasCostoIndex : <<build>>
+TecnicasCostoIndex --> TecnicasCostoCreate : <<link>>
+TecnicasCostoCreate --> TecnicaCostoCtrl : <<submit>> Guardar
+TecnicaCostoCtrl --> TecnicasCostoIndex : <<redirect>>
+TecnicasCostoIndex --> TecnicasCostoShow : <<link>>
+TecnicasCostoShow --> TecnicasCostoEdit : <<link>>
+TecnicasCostoEdit --> TecnicaCostoCtrl : <<submit>> Actualizar
+TecnicaCostoCtrl --> TecnicasCostoShow : <<redirect>>
+TecnicasCostoShow --> TecnicaCostoCtrl : <<submit>> Eliminar
+TecnicaCostoCtrl --> TecnicasCostoIndex : <<redirect>>
+
+' -- Gestión de Lotes de Inventario CRUD --
+Dashboard --> LoteCtrl : <<link>> Lotes Inventario
+LoteCtrl --> LotesIndex : <<build>>
+LotesIndex --> LotesCreate : <<link>>
+LotesCreate --> LoteCtrl : <<submit>> Guardar Lote
+LoteCtrl --> LotesIndex : <<redirect>>
+LotesIndex --> LotesShow : <<link>>
+LotesShow --> LotesEdit : <<link>>
+LotesEdit --> LoteCtrl : <<submit>> Actualizar
+LoteCtrl --> LotesShow : <<redirect>>
+LotesShow --> LoteCtrl : <<submit>> Eliminar
+LoteCtrl --> LotesIndex : <<redirect>>
+
+' -- Salidas de Lotes --
+Dashboard --> SalidaLoteCtrl : <<link>> Salidas de Lotes
+SalidaLoteCtrl --> SalidasIndex : <<build>>
+SalidasIndex --> SalidasRegistrar : <<link>> Registrar Salida
+SalidasRegistrar --> SalidaLoteCtrl : <<submit>> Guardar Salida
+SalidaLoteCtrl --> SalidasIndex : <<redirect>>
+SalidasIndex --> SalidasShow : <<link>>
+SalidasShow --> SalidaLoteCtrl : <<submit>> Eliminar
+SalidaLoteCtrl --> SalidasIndex : <<redirect>>
+
+' -- Kardex de Inventario --
+Dashboard --> KardexCtrl : <<link>> Kardex
+KardexCtrl --> KardexIndex : <<build>>
+KardexIndex --> KardexShow : <<link>>
+KardexShow --> KardexReporte : <<link>> Reportes
+KardexReporte --> KardexCtrl : <<submit>> Generar Reporte
+
+' -- Movimientos de Inventario --
+Dashboard --> MovimientoCtrl : <<link>> Movimientos
+MovimientoCtrl --> MovimientosIndex : <<build>>
+MovimientosIndex --> MovimientosShow : <<link>>
+
+' -- Configuraciones --
+Dashboard --> ConfigCtrl : <<link>> Configuraciones
+ConfigCtrl --> ConfigIndex : <<build>>
+ConfigIndex --> ConfigTema : <<link>> Temas
+ConfigTema --> ConfigCtrl : <<submit>> Guardar Tema
+ConfigCtrl --> ConfigIndex : <<redirect>>
+ConfigIndex --> ConfigSistema : <<link>> Sistema
+ConfigSistema --> ConfigCtrl : <<submit>> Guardar Sistema
+ConfigCtrl --> ConfigIndex : <<redirect>>
+ConfigIndex --> ConfigNotif : <<link>> Notificaciones
+ConfigNotif --> ConfigCtrl : <<submit>> Guardar Notificaciones
+ConfigCtrl --> ConfigIndex : <<redirect>>
+
+' -- Bitácora / Auditoría --
+Dashboard --> BitacoraCtrl : <<link>> Bitácora
+BitacoraCtrl --> BitacoraIndex : <<build>>
+BitacoraIndex --> BitacoraFiltrar : <<link>>
+BitacoraFiltrar --> BitacoraCtrl : <<submit>> Filtrar
+BitacoraCtrl --> BitacoraIndex : <<redirect>>
+BitacoraIndex --> BitacoraShow : <<link>>
+BitacoraIndex --> BitacoraExportar : <<link>> Exportar
+BitacoraExportar --> BitacoraCtrl : <<submit>> Descargar
+
 legend bottom right
-|= Tipo           |= Significado                                  |
-|<back:#D6EAF8> Client Page </back>| Vista que ve el usuario en el navegador   |
-|<back:#FDEBD0> Server Page </back>| Controlador o proceso ejecutado en servidor |
-|<back:#FCF3CF> Form        </back>| Pantalla o sección de captura de datos    |
+|= Tipo                |= Significado                                  |
+|<back:#D6EAF8> Client Page  </back>| Vista que ve el usuario en el navegador   |
+|<back:#FDEBD0> Server Page  </back>| Controlador o proceso ejecutado en servidor |
+|<back:#FCF3CF> Form         </back>| Pantalla o sección de captura de datos    |
+|<back:#D5F4E6> Configuración</back>| Pantalla de ajustes visuales y del sistema |
+|<back:#FADBD8> Auditoría    </back>| Historial y registro de actividades      |
 endlegend
 
 @enduml

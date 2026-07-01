@@ -13,7 +13,7 @@ class CarritoDetalle extends Model
 
     protected $fillable = [
         'carrito_id',
-        'producto_id',
+        'producto_variante_id',
         'cantidad',
         'precio_unitario',
         'descuento',
@@ -30,14 +30,16 @@ class CarritoDetalle extends Model
         return $this->belongsTo(Carrito::class);
     }
 
-    public function producto()
+    public function variante()
     {
-        return $this->belongsTo(Producto::class);
+        return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
     }
 
     // Métodos auxiliares
     public function getSubtotalAttribute()
     {
-        return ($this->precio_unitario - $this->descuento) * $this->cantidad;
+        $precioUnitario = (float) $this->precio_unitario;
+
+        return $precioUnitario * (int) $this->cantidad;
     }
 }

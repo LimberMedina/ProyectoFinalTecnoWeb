@@ -14,21 +14,21 @@ class Producto extends Model
     protected $fillable = [
         'codigo',
         'nombre',
-        'precio_compra',
-        'precio_venta',
-        'precio_venta_mayorista',
-        'stock_actual',
-        'stock_minimo',
+        'imagen',
+        'qr',
+        'precio_venta_base',
+        'precio_venta_mayorista_base',
         'marca',
+        'descripcion',
+        'genero',
         'categoria_id',
         'estado',
     ];
 
     protected $casts = [
-        'precio_compra' => 'decimal:2',
-        'precio_venta' => 'decimal:2',
-        'precio_venta_mayorista' => 'decimal:2',
         'estado' => 'boolean',
+        'precio_venta_base' => 'decimal:2',
+        'precio_venta_mayorista_base' => 'decimal:2',
     ];
 
     // Relaciones
@@ -50,6 +50,11 @@ class Producto extends Model
     public function kardex()
     {
         return $this->hasMany(KardexInventario::class);
+    }
+
+    public function variantes()
+    {
+        return $this->hasMany(ProductoVariante::class, 'id_producto');
     }
 
     public function detallesVenta()

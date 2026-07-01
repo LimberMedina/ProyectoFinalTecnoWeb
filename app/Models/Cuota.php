@@ -17,6 +17,7 @@ class Cuota extends Model
         'monto',
         'interes_cuota',
         'dias_mora',
+        'mora',
         'monto_pagado',
         'monto_pendiente',
         'fecha_vencimiento',
@@ -69,6 +70,27 @@ class Cuota extends Model
     {
         if ($this->monto == 0) return 0;
         return ($this->monto_pagado / $this->monto) * 100;
+    }
+
+    /**
+     * Booted model events: sincronizar el estado del crédito cuando
+     * una cuota es creada/actualizada/eliminada para mantener consistencia.
+     */
+    protected static function booted()
+    {
+        static::saved(function (Cuota $cuota) {
+            $credito = $cuota->credito;
+            if ($credito) {
+                $credito->sincronizarEstado();
+            }
+        });
+
+        static::deleted(function (Cuota $cuota) {
+            $credito = $cuota->credito;
+            if ($credito) {
+                $credito->sincronizarEstado();
+            }
+        });
     }
 
     // Relaciones

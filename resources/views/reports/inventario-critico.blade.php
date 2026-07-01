@@ -33,27 +33,21 @@
                 <tr>
                     <th>#</th>
                     <th>Producto</th>
-                    <th>Código</th>
-                    <th>Categoría</th>
+                    <th>Talla</th>
+                    <th>Color</th>
+                    <th>SKU</th>
                     <th class="text-center">Stock Actual</th>
-                    <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($datos as $index => $producto)
-                <tr class="{{ $producto->stock == 0 ? 'critico' : '' }}">
+                <tr class="{{ $producto->stock_actual == 0 ? 'critico' : '' }}">
                     <td>{{ $index + 1 }}</td>
-                    <td>{{ $producto->nombre }}</td>
-                    <td>{{ $producto->codigo }}</td>
-                    <td>{{ $producto->categoria->nombre ?? 'N/A' }}</td>
-                    <td class="text-center">{{ $producto->stock }}</td>
-                    <td>
-                        @if($producto->stock == 0)
-                            <strong>AGOTADO</strong>
-                        @else
-                            Stock Bajo
-                        @endif
-                    </td>
+                    <td>{{ $producto->producto->nombre ?? 'N/A' }}</td>
+                    <td>{{ $producto->talla ?? 'N/A' }}</td>
+                    <td>{{ $producto->color ?? 'N/A' }}</td>
+                    <td>{{ $producto->sku ?? 'N/A' }}</td>
+                    <td class="text-center">{{ $producto->stock_actual }}</td>
                 </tr>
                 @endforeach
             </tbody>

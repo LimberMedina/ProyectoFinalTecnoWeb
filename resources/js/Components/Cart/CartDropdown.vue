@@ -73,6 +73,10 @@ const emit = defineEmits(["close"]);
                         />
                         <div class="flex-grow-1">
                             <h6 class="mb-1 small">{{ item.nombre }}</h6>
+                            <div class="text-muted small mb-1">
+                                {{ item.variante?.talla || "-" }} /
+                                {{ item.variante?.color || "-" }}
+                            </div>
                             <div class="d-flex align-items-center mb-1">
                                 <input
                                     type="number"
@@ -80,7 +84,9 @@ const emit = defineEmits(["close"]);
                                     @change="
                                         updateQuantity(
                                             item.id,
-                                            $event.target.value
+                                            $event.target.value,
+                                            item.producto_variante_id ||
+                                                item.variante?.id,
                                         )
                                     "
                                     class="form-control form-control-sm me-2"

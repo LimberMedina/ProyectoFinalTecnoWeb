@@ -6,6 +6,7 @@ use App\Models\Carrito;
 use App\Models\CarritoDetalle;
 use App\Models\Producto;
 use Illuminate\Http\Request;
+use App\Models\ProductoVariante;
 
 class CartController extends Controller
 {
@@ -15,36 +16,83 @@ class CartController extends Controller
             return response()->json(['items' => [], 'total' => 0]);
         }
 
-        $carrito = Carrito::with(['detalles.producto.promociones' => function ($q) {
-            $q->where('fecha_inicio', '<=', now())
-              ->where('fecha_fin', '>=', now())
-              ->where('activa', true);
-        }])->firstOrCreate(['user_id' => auth()->id()]);
+        $carrito = Carrito::with([
+            'detalles.variante.producto.promociones' => function ($q) {
+                $q->where('fecha_inicio', '<=', now())
+                  ->where('fecha_fin', '>=', now())
+                  ->where('estado', true);
+            },
+            'detalles.variante.producto.categoria',
+            'detalles.variante.producto.imagenes',
+            'detalles.variante.producto.variantes',
+        ])->firstOrCreate(['user_id' => auth()->id()]);
 
         // Recalcular precios con promociones actuales
         $carrito->detalles->each(function ($detalle) {
-            $producto = $detalle->producto;
+            $variante = $detalle->variante;
+
+            if (! $variante || ! $variante->producto) {
+                return;
+            }
+
+            $producto = $variante->producto;
             $descuentoMaximo = $producto->promociones->max('descuento') ?? 0;
             
-            $detalle->precio_unitario = $producto->precio;
-            $detalle->descuento = $producto->precio * ($descuentoMaximo / 100);
+            $detalle->precio_unitario = $variante->precio_venta;
+            $detalle->descuento = $variante->precio_venta * ($descuentoMaximo / 100);
             $detalle->save();
         });
 
         return response()->json([
             'items' => $carrito->detalles->map(function ($detalle) {
+                $variante = $detalle->variante;
+                $producto = $variante?->producto;
+
+                if (! $variante || ! $producto) {
+                    return null;
+                }
+
+                $descuento = (float) ($detalle->descuento ?? 0);
+                $precioUnitario = (float) ($detalle->precio_unitario ?? 0);
+                $precioFinal = max(0, $precioUnitario - $descuento);
+
                 return [
                     'id' => $detalle->id,
-                    'producto_id' => $detalle->producto_id,
-                    'nombre' => $detalle->producto->nombre,
-                    'imagen' => $detalle->producto->imagen,
+                    'producto_variante_id' => $variante->id,
+                    'producto' => [
+                        'id' => $producto->id,
+                        'codigo' => $producto->codigo,
+                        'nombre' => $producto->nombre,
+                        'imagen' => $producto->imagen,
+                        'categoria' => $producto->categoria,
+                    ],
+                    'variante' => [
+                        'id' => $variante->id,
+                        'sku' => $variante->sku,
+                        'talla' => $variante->talla,
+                        'color' => $variante->color,
+                        'stock_actual' => $variante->stock_actual,
+                        'precio_venta' => $variante->precio_venta,
+                    ],
+                    'nombre' => $producto->nombre,
+                    'imagen' => $producto->imagen,
+                    'variantes_disponibles' => $producto->variantes
+                        ->where('estado', 'ACTIVO')
+                        ->map(fn ($item) => [
+                            'id' => $item->id,
+                            'talla' => $item->talla,
+                            'color' => $item->color,
+                            'stock_actual' => $item->stock_actual,
+                            'precio_venta' => $item->precio_venta,
+                        ])
+                        ->values(),
                     'cantidad' => $detalle->cantidad,
                     'precio_unitario' => $detalle->precio_unitario,
                     'descuento' => $detalle->descuento,
-                    'precio_final' => $detalle->precio_unitario - $detalle->descuento,
-                    'subtotal' => $detalle->subtotal()
+                    'precio_final' => $precioFinal,
+                    'subtotal' => $detalle->subtotal,
                 ];
-            }),
+            })->filter()->values(),
             'total' => $carrito->total()
         ]);
     }
@@ -52,18 +100,21 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $request->validate([
-            'producto_id' => 'required|exists:productos,id',
+            'producto_variante_id' => 'required|exists:producto_variante,id',
             'cantidad' => 'required|integer|min:1'
         ]);
 
-        $producto = Producto::with(['promociones' => function ($q) {
+        $variante = ProductoVariante::with(['producto.promociones' => function ($q) {
             $q->where('fecha_inicio', '<=', now())
               ->where('fecha_fin', '>=', now())
               ->where('activa', true);
-        }])->findOrFail($request->producto_id);
+        }, 'producto.categoria', 'producto.imagenes', 'producto.variantes'])->findOrFail($request->producto_variante_id);
 
-        // Verificar stock
-        if ($producto->stock < $request->cantidad) {
+        if (! $variante) {
+            return response()->json(['error' => 'Debes seleccionar una variante válida'], 422);
+        }
+
+        if ($variante->stock_actual < $request->cantidad) {
             return response()->json(['error' => 'Stock insuficiente'], 422);
         }
 
@@ -73,22 +124,26 @@ class CartController extends Controller
 
         $carrito = Carrito::firstOrCreate(['user_id' => auth()->id()]);
 
+        $producto = $variante->producto;
         $descuentoMaximo = $producto->promociones->max('descuento') ?? 0;
-        $descuentoMonto = $producto->precio * ($descuentoMaximo / 100);
+        $descuentoMonto = $variante->precio_venta * ($descuentoMaximo / 100);
 
         $detalle = CarritoDetalle::where('carrito_id', $carrito->id)
-            ->where('producto_id', $producto->id)
+            ->where('producto_variante_id', $variante->id)
             ->first();
 
         if ($detalle) {
             $detalle->cantidad += $request->cantidad;
+            $detalle->producto_variante_id = $variante->id;
+            $detalle->precio_unitario = $variante->precio_venta;
+            $detalle->descuento = $descuentoMonto;
             $detalle->save();
         } else {
             CarritoDetalle::create([
                 'carrito_id' => $carrito->id,
-                'producto_id' => $producto->id,
+                'producto_variante_id' => $variante->id,
                 'cantidad' => $request->cantidad,
-                'precio_unitario' => $producto->precio,
+                'precio_unitario' => $variante->precio_venta,
                 'descuento' => $descuentoMonto
             ]);
         }
@@ -99,7 +154,8 @@ class CartController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'cantidad' => 'required|integer|min:1'
+            'cantidad' => 'required|integer|min:1',
+            'producto_variante_id' => 'required|exists:producto_variante,id',
         ]);
 
         if (!auth()->check()) {
@@ -110,12 +166,21 @@ class CartController extends Controller
             $q->where('user_id', auth()->id());
         })->findOrFail($id);
 
+        $variante = ProductoVariante::with('producto')->findOrFail($request->producto_variante_id);
+
+        if (! $variante) {
+            return response()->json(['error' => 'La variante seleccionada no existe.'], 422);
+        }
+
         // Verificar stock
-        if ($detalle->producto->stock < $request->cantidad) {
+        if ($variante->stock_actual < $request->cantidad) {
             return response()->json(['error' => 'Stock insuficiente'], 422);
         }
 
         $detalle->cantidad = $request->cantidad;
+        $detalle->producto_variante_id = $variante->id;
+        $detalle->precio_unitario = $variante->precio_venta;
+        $detalle->descuento = ($variante->precio_venta * (($variante->producto->promociones->max('descuento') ?? 0) / 100));
         $detalle->save();
 
         return $this->get();
@@ -155,7 +220,7 @@ class CartController extends Controller
     {
         $request->validate([
             'items' => 'required|array',
-            'items.*.producto_id' => 'required|exists:productos,id',
+            'items.*.producto_variante_id' => 'required|exists:producto_variante,id',
             'items.*.cantidad' => 'required|integer|min:1'
         ]);
 
@@ -170,21 +235,18 @@ class CartController extends Controller
 
         // Agregar items desde localStorage
         foreach ($request->items as $item) {
-            $producto = Producto::with(['promociones' => function ($q) {
-                $q->where('fecha_inicio', '<=', now())
-                  ->where('fecha_fin', '>=', now())
-                  ->where('activa', true);
-            }])->find($item['producto_id']);
+            $variante = ProductoVariante::with('producto.promociones')->find($item['producto_variante_id']);
 
-            if ($producto && $producto->stock >= $item['cantidad']) {
+            if ($variante && $variante->stock_actual >= $item['cantidad']) {
+                $producto = $variante->producto;
                 $descuentoMaximo = $producto->promociones->max('descuento') ?? 0;
-                $descuentoMonto = $producto->precio * ($descuentoMaximo / 100);
+                $descuentoMonto = $variante->precio_venta * ($descuentoMaximo / 100);
 
                 CarritoDetalle::create([
                     'carrito_id' => $carrito->id,
-                    'producto_id' => $producto->id,
+                    'producto_variante_id' => $variante->id,
                     'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $producto->precio,
+                    'precio_unitario' => $variante->precio_venta,
                     'descuento' => $descuentoMonto
                 ]);
             }

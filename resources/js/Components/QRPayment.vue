@@ -130,6 +130,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
+import { showToast } from "@/utils/toast";
 
 const props = defineProps({
     qrImage: {
@@ -179,6 +180,14 @@ const props = defineProps({
     ventaId: {
         type: [Number, String],
         required: true, // ID de la venta para verificar estado
+    },
+    verificationUrl: {
+        type: String,
+        default: null,
+    },
+    redirectUrl: {
+        type: String,
+        default: null,
     },
 });
 
@@ -249,6 +258,16 @@ const statusBadgeClass = computed(() => {
     return classes[props.status] || "bg-secondary";
 });
 
+const successMessage = computed(() => {
+    const descripcion = (props.descripcion || "").toLowerCase();
+
+    if (descripcion.includes("cuota")) {
+        return "Pago de cuota confirmado con éxito.";
+    }
+
+    return "Pago confirmado con éxito. Gracias por tu compra.";
+});
+
 const statusIcon = computed(() => {
     const icons = {
         pending: "bi-hourglass-split",
@@ -293,34 +312,42 @@ const checkPaymentStatus = async () => {
     console.log("🔍 Verificando pago...", { ventaId: props.ventaId });
 
     try {
-        const response = await axios.get(
-            `/api/ventas/${props.ventaId}/verificar-pago`,
-        );
+        const verificationUrl =
+            props.verificationUrl ||
+            `/api/ventas/${props.ventaId}/verificar-pago`;
+        const response = await axios.get(verificationUrl);
 
         console.log("✅ Respuesta de verificación:", response.data);
 
+        const paymentStatus = String(
+            response.data.status ??
+                response.data.pago_facil_status ??
+                response.data.estado ??
+                "pending",
+        ).toLowerCase();
+
         // Verificar si el pago está completado
-        if (
-            response.data.status === "completed" ||
-            response.data.status === "pagado"
-        ) {
+        if (paymentStatus === "completed" || paymentStatus === "pagado") {
             // Pago confirmado!
             console.log("🎉🎉🎉 ¡PAGO CONFIRMADO! Recargando página...");
             paymentDetected.value = true;
             stopPolling(); // Detener polling antes de recargar
+            showToast(successMessage.value, "success");
 
             // Dar feedback visual antes de recargar
             setTimeout(() => {
-                console.log("🔄 Forzando recarga completa de la página...");
-                // Forzar recarga completa para actualizar todos los datos
-                router.visit(window.location.pathname, {
+                const destination =
+                    props.redirectUrl || window.location.pathname;
+                console.log("🔄 Navegando a:", destination);
+                router.visit(destination, {
                     preserveScroll: false,
                     preserveState: false,
+                    replace: true,
                 });
             }, 800);
         } else if (
-            response.data.status === "expired" ||
-            response.data.status === "cancelled"
+            paymentStatus === "expired" ||
+            paymentStatus === "cancelled"
         ) {
             console.warn("❌ QR expirado o cancelado:", response.data.mensaje);
             stopPolling();
@@ -328,19 +355,19 @@ const checkPaymentStatus = async () => {
                 "El código QR ha expirado. Por favor, genera un nuevo pedido.",
             );
         } else if (
-            response.data.status === "pending" ||
-            response.data.status === "pendiente"
+            paymentStatus === "pending" ||
+            paymentStatus === "pendiente"
         ) {
             console.log("⏳ Pago aún pendiente - continuando polling");
             // Continuar polling
-        } else if (response.data.status === "error") {
+        } else if (paymentStatus === "error") {
             console.error("❌ Error en verificación:", response.data.mensaje);
             stopPolling();
         }
 
         // Llamar callback si existe
-        if (props.onStatusChange && response.data.status) {
-            props.onStatusChange(response.data.status, response.data);
+        if (props.onStatusChange && paymentStatus) {
+            props.onStatusChange(paymentStatus, response.data);
         }
     } catch (error) {
         console.error("❌ Error al verificar estado:", error);
@@ -371,9 +398,10 @@ const simulatePayment = async () => {
 
         if (response.data.success) {
             alert("Pago simulado exitosamente. Recargando página...");
-            router.visit(window.location.pathname, {
+            router.visit(props.redirectUrl || window.location.pathname, {
                 preserveScroll: false,
                 preserveState: false,
+                replace: true,
             });
         }
     } catch (error) {

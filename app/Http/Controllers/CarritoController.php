@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateCarritoRequest;
 use App\Models\Carrito;
 use App\Models\CarritoDetalle;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
 use App\Services\PromocionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,7 +27,12 @@ class CarritoController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Carrito::class);
-        $carrito = Carrito::with(['detalles.producto.categoria', 'detalles.producto.imagenes'])
+        $carrito = Carrito::with([
+            'detalles.variante.producto.categoria',
+            'detalles.variante.producto.imagenes',
+            'detalles.variante.producto.variantes',
+                'detalles.variante',
+            ])
             ->where('user_id', $request->user()->id)
             ->first();
 
@@ -40,25 +46,49 @@ class CarritoController extends Controller
 
         // Aplicar descuentos automáticos
         $detallesConDescuento = $carrito->detalles->map(function ($detalle) {
-            $descuento = $this->promocionService->calcularDescuentoProducto(
-                $detalle->producto,
-                'minorista'
-            );
+            $variante = $detalle->variante;
+            $producto = $variante?->producto;
 
-            $precioUnitario = $detalle->producto->precio_venta;
-            $montoDescuento = ($precioUnitario * $descuento) / 100;
+            if (!$variante || !$producto) {
+                return null;
+            }
+
+            $descuentoMontoPersistido = (float) ($detalle->descuento ?? 0);
+            $precioUnitario = (float) $variante->precio_venta;
+            $montoDescuento = $descuentoMontoPersistido > 0
+                ? $descuentoMontoPersistido
+                : (($precioUnitario * $this->promocionService->calcularDescuentoProducto($producto, 'minorista')) / 100);
+            $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
 
             return [
                 'id' => $detalle->id,
-                'producto' => $detalle->producto,
+                'producto' => $producto,
+                'variante' => [
+                    'id' => $variante->id,
+                    'talla' => $variante->talla,
+                    'color' => $variante->color,
+                    'sku' => $variante->sku,
+                    'stock_actual' => $variante->stock_actual,
+                ],
+                'variantes_disponibles' => $producto->variantes
+                    ->where('estado', 'ACTIVO')
+                    ->map(fn ($item) => [
+                        'id' => $item->id,
+                        'talla' => $item->talla,
+                        'color' => $item->color,
+                        'stock_actual' => $item->stock_actual,
+                        'precio_venta' => $item->precio_venta,
+                    ])
+                    ->values(),
                 'cantidad' => $detalle->cantidad,
-                'precio_unitario' => $precioUnitario,
-                'descuento_porcentaje' => $descuento,
+                'precio_unitario' => $precioFinal,
+                'precio_original' => round($precioUnitario, 2),
+                'descuento_porcentaje' => $descuentoMontoPersistido > 0 ? round(($descuentoMontoPersistido / $precioUnitario) * 100, 2) : 0,
                 'descuento_monto' => round($montoDescuento, 2),
-                'precio_con_descuento' => round($precioUnitario - $montoDescuento, 2),
-                'subtotal' => round(($precioUnitario - $montoDescuento) * $detalle->cantidad, 2),
+                'precio_con_descuento' => $precioFinal,
+                'subtotal' => round($precioFinal * (int) $detalle->cantidad, 2),
             ];
-        });
+        })->filter()->values();
 
         $total = $detallesConDescuento->sum('subtotal');
 
@@ -75,56 +105,88 @@ class CarritoController extends Controller
     public function store(AddToCarritoRequest $request)
     {
         $this->authorize('create', Carrito::class);
-        
 
-        $producto = Producto::findOrFail($request->producto_id);
-
-        // Verificar stock
-        if ($producto->stock_actual < $request->cantidad) {
-            return back()->with('error', 'Stock insuficiente');
-        }
+        $promocionId = $request->input('promocion_id');
+        $descuentoPorcentajeRequest = $request->input('descuento_porcentaje');
 
         // Obtener o crear carrito
         $carrito = Carrito::firstOrCreate([
             'user_id' => $request->user()->id,
         ]);
 
-        // Verificar si el producto ya existe en el carrito
-        $detalleExistente = CarritoDetalle::where('carrito_id', $carrito->id)
-            ->where('producto_id', $producto->id)
-            ->first();
+        $items = collect($request->input('items', []));
 
-        // Calcular descuento del producto
-        $descuentoPorcentaje = $this->promocionService->calcularDescuentoProducto($producto, 'minorista');
-        $montoDescuento = ($producto->precio_venta * $descuentoPorcentaje) / 100;
-
-        if ($detalleExistente) {
-            // Actualizar cantidad y descuento
-            $nuevaCantidad = $detalleExistente->cantidad + $request->cantidad;
-
-            if ($producto->stock_actual < $nuevaCantidad) {
-                return back()->with('error', 'Stock insuficiente para la cantidad solicitada');
+        if ($items->isEmpty()) {
+            if ($request->filled('producto_variante_id') && $request->filled('cantidad')) {
+                $items = collect([[
+                    'producto_variante_id' => (int) $request->input('producto_variante_id'),
+                    'cantidad' => (int) $request->input('cantidad'),
+                ]]);
             }
-
-            $detalleExistente->update([
-                'cantidad' => $nuevaCantidad,
-                'precio_unitario' => $producto->precio_venta,
-                'descuento' => round($montoDescuento, 2),
-            ]);
-
-            return back()->with('success', 'Cantidad actualizada en el carrito');
         }
 
-        // Crear nuevo detalle con descuento calculado
-        CarritoDetalle::create([
-            'carrito_id' => $carrito->id,
-            'producto_id' => $producto->id,
-            'cantidad' => $request->cantidad,
-            'precio_unitario' => $producto->precio_venta,
-            'descuento' => round($montoDescuento, 2),
-        ]);
+        if ($items->isEmpty()) {
+            return back()->with('error', 'Debes seleccionar al menos una variante.');
+        }
 
-        return back()->with('success', 'Producto agregado al carrito');
+        foreach ($items as $item) {
+            $variante = ProductoVariante::with('producto')->find($item['producto_variante_id']);
+
+            if (!$variante) {
+                return back()->with('error', 'Una de las variantes seleccionadas no existe.');
+            }
+
+            if (strtoupper((string) $variante->estado) !== 'ACTIVO') {
+                return back()->with('error', 'Una de las variantes seleccionadas está inactiva.');
+            }
+
+            $cantidadSolicitada = (int) $item['cantidad'];
+            if ($cantidadSolicitada < 1) {
+                continue;
+            }
+
+            $detalleExistente = CarritoDetalle::where('carrito_id', $carrito->id)
+                ->where('producto_variante_id', $variante->id)
+                ->first();
+
+            $nuevaCantidad = $detalleExistente
+                ? $detalleExistente->cantidad + $cantidadSolicitada
+                : $cantidadSolicitada;
+
+            if ((int) $variante->stock_actual < $nuevaCantidad) {
+                return back()->with('error', "Stock insuficiente para {$variante->producto->nombre} ({$variante->talla} / {$variante->color}).");
+            }
+
+            $descuentoPorcentaje = $descuentoPorcentajeRequest !== null
+                ? (float) $descuentoPorcentajeRequest
+                : $this->promocionService->calcularDescuentoProducto(
+                    $variante->producto,
+                    'minorista',
+                    $promocionId ? (int) $promocionId : null
+                );
+            $precioUnitario = (float) $variante->precio_venta;
+            $montoDescuento = ($precioUnitario * $descuentoPorcentaje) / 100;
+            $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
+
+            if ($detalleExistente) {
+                $detalleExistente->update([
+                    'cantidad' => $nuevaCantidad,
+                    'precio_unitario' => $precioFinal,
+                    'descuento' => round($montoDescuento, 2),
+                ]);
+                continue;
+            }
+
+            CarritoDetalle::create([
+                'carrito_id' => $carrito->id,
+                'producto_variante_id' => $variante->id,
+                'cantidad' => $cantidadSolicitada,
+                'precio_unitario' => $precioFinal,
+                'descuento' => round($montoDescuento, 2),
+            ]);
+        }
+
+        return back()->with('success', 'Productos agregados al carrito con éxito.');
     }
 
     /**
@@ -138,18 +200,55 @@ class CarritoController extends Controller
         }
 
 
-        // Verificar stock
-        if ($carritoDetalle->producto->stock_actual < $request->cantidad) {
+        $productoVarianteId = (int) $request->input('producto_variante_id');
+        $variante = ProductoVariante::with('producto')->find($productoVarianteId);
+
+        if (!$variante) {
+            return back()->with('error', 'La variante seleccionada no existe.');
+        }
+
+        if ($variante->id_producto !== $carritoDetalle->variante?->id_producto) {
+            return back()->with('error', 'La variante seleccionada no corresponde al producto.');
+        }
+
+        if ((int) $variante->stock_actual < (int) $request->cantidad) {
             return back()->with('error', 'Stock insuficiente');
         }
 
         // Recalcular descuento
-        $descuentoPorcentaje = $this->promocionService->calcularDescuentoProducto($carritoDetalle->producto, 'minorista');
-        $montoDescuento = ($carritoDetalle->producto->precio_venta * $descuentoPorcentaje) / 100;
+        $descuentoPorcentaje = $request->input('descuento_porcentaje') !== null
+            ? (float) $request->input('descuento_porcentaje')
+            : $this->promocionService->calcularDescuentoProducto($variante->producto, 'minorista');
+        $precioUnitario = (float) $variante->precio_venta;
+        $montoDescuento = ($precioUnitario * $descuentoPorcentaje) / 100;
+        $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
+
+        $detalleDuplicado = CarritoDetalle::where('carrito_id', $carritoDetalle->carrito_id)
+            ->where('producto_variante_id', $variante->id)
+            ->where('id', '!=', $carritoDetalle->id)
+            ->first();
+
+        if ($detalleDuplicado) {
+            $cantidadCombinada = $detalleDuplicado->cantidad + (int) $request->cantidad;
+            if ((int) $variante->stock_actual < $cantidadCombinada) {
+                return back()->with('error', 'Stock insuficiente para combinar variantes.');
+            }
+
+            $detalleDuplicado->update([
+                'cantidad' => $cantidadCombinada,
+                'precio_unitario' => $precioFinal,
+                'descuento' => round($montoDescuento, 2),
+            ]);
+
+            $carritoDetalle->delete();
+
+            return back()->with('success', 'Variante y cantidad actualizadas');
+        }
 
         $carritoDetalle->update([
             'cantidad' => $request->cantidad,
-            'precio_unitario' => $carritoDetalle->producto->precio_venta,
+            'producto_variante_id' => $variante->id,
+            'precio_unitario' => $precioFinal,
             'descuento' => round($montoDescuento, 2),
         ]);
 
@@ -172,7 +271,7 @@ class CarritoController extends Controller
                 $carrito->delete();
             }
 
-            return redirect()->route('carritos.index')->with('success', 'Carrito vaciado exitosamente');
+            return redirect()->route('carritos.index')->with('success', 'Carrito vaciado con éxito.');
         }
 
         // Caso normal: eliminar un item específico

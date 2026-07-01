@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PedidoOnlineController;
+use App\Http\Controllers\EmailVerificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,9 @@ use App\Http\Controllers\PedidoOnlineController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Rutas públicas para verificación
+Route::post('/verify-email', [EmailVerificationController::class, 'verifyEmail']);
 
 // Verificación de estado de pago para ventas online
 // Usar middleware 'web' para tener acceso a sesiones + auth para verificar usuario autenticado

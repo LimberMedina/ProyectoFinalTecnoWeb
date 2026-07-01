@@ -18,6 +18,8 @@ class CreditoController extends Controller
      */
     public function index(Request $request)
     {
+        $this->sincronizarCreditosPendientes();
+
         $query = Credito::with(['venta', 'venta.user', 'cuotas']);
 
         // Filtro por estado
@@ -64,6 +66,8 @@ class CreditoController extends Controller
      */
     public function show($id)
     {
+        $this->sincronizarCreditosPendientes();
+
         $credito = Credito::with([
             'venta.user',
             'venta.detalles.producto',
@@ -124,14 +128,7 @@ class CreditoController extends Controller
             $credito = $cuota->credito;
             $credito->monto_pagado += $request->monto;
             $credito->monto_pendiente -= $request->monto;
-
-            // Si se pagó completamente el crédito, cambiar estado
-            if ($credito->monto_pendiente <= 0.01) {
-                $credito->estado = 'pagado';
-                $credito->monto_pendiente = 0;
-                $credito->dias_mora = 0;
-            }
-            $credito->save();
+            $credito->sincronizarEstado();
 
             // Actualizar estados de mora
             $this->actualizarMora($credito);
@@ -227,5 +224,19 @@ class CreditoController extends Controller
         }
         
         $credito->save();
+    }
+
+    /**
+     * Recalcula el estado de créditos potencialmente desactualizados.
+     */
+    private function sincronizarCreditosPendientes(): void
+    {
+        Credito::with('cuotas')
+            ->whereIn('estado', ['pendiente', 'vencido'])
+            ->chunkById(50, function ($creditos) {
+                foreach ($creditos as $credito) {
+                    $credito->sincronizarEstado();
+                }
+            });
     }
 }

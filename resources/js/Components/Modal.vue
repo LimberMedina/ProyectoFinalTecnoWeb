@@ -34,7 +34,7 @@ watch(
                 showSlot.value = false;
             }, 200);
         }
-    }
+    },
 );
 
 const close = () => {
@@ -58,18 +58,18 @@ onUnmounted(() => {
 
 const maxWidthClass = computed(() => {
     return {
-        sm: "modal-sm",
-        md: "",
-        lg: "modal-lg",
-        xl: "modal-xl",
-        "2xl": "modal-xl",
+        sm: "max-w-sm",
+        md: "max-w-md",
+        lg: "max-w-lg",
+        xl: "max-w-xl",
+        "2xl": "max-w-2xl",
     }[props.maxWidth];
 });
 </script>
 
 <template>
     <dialog
-        class="modal fade"
+        class="fixed inset-0 z-50 m-0 h-full w-full overflow-y-auto bg-transparent p-4 outline-none"
         :class="{ 'show d-block': show }"
         ref="dialog"
         tabindex="-1"
@@ -81,17 +81,14 @@ const maxWidthClass = computed(() => {
             max-height: none;
         "
     >
-        <div
-            class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
-            :class="maxWidthClass"
-        >
-            <div class="modal-content" v-if="showSlot">
+        <div class="flex min-h-full items-center justify-center px-4 py-6">
+            <div v-if="showSlot" class="w-full" :class="maxWidthClass">
                 <slot />
             </div>
         </div>
     </dialog>
     <div
-        class="modal-backdrop fade"
+        class="fixed inset-0 z-40 bg-slate-950/20 transition-opacity"
         :class="{ show: show }"
         v-if="show"
         @click="close"

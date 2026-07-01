@@ -40,7 +40,7 @@ class MenuService
         $roleIds = [$roleId];
 
         // Cache key único por combinación de roles
-        $cacheKey = 'menu_items_' . md5(implode('_', $roleIds));
+        $cacheKey = 'menu_items_v2_' . md5(implode('_', $roleIds));
 
         // Cachear menú por 5 minutos
         $menuItems = Cache::remember($cacheKey, 300, function () use ($roleIds) {
@@ -85,7 +85,116 @@ class MenuService
             ->toArray();
         });
 
+        if ((int) $roleId === 1) {
+            $menuItems = collect($menuItems)
+                ->map(function (array $item) {
+                    if (($item['route'] ?? null) === 'inventarios.index') {
+                        $item['label'] = 'Inventario';
+                        $item['icon'] = 'FaWarehouse';
+                        $item['order'] = 57;
+                    }
+
+                    if (($item['route'] ?? null) === 'metodos-pago.index') {
+                        $item['label'] = 'Métodos de Pago';
+                        $item['icon'] = 'FaWallet';
+                        $item['order'] = 88;
+                    }
+
+                    return $item;
+                })
+                ->reject(function (array $item) {
+                    return ($item['route'] ?? null) === 'tecnicas-inventario.index';
+                })
+                ->values()
+                ->toArray();
+
+            $hasInventory = collect($menuItems)->contains(function ($item) {
+                return ($item['route'] ?? null) === 'inventarios.index';
+            });
+
+            if (! $hasInventory) {
+                $menuItems[] = [
+                    'id' => 'fallback-inventario',
+                    'label' => 'Inventario',
+                    'route' => 'inventarios.index',
+                    'icon' => 'FaWarehouse',
+                    'order' => 57,
+                    'children' => [],
+                ];
+
+                $menuItems = collect($menuItems)
+                    ->values()
+                    ->toArray();
+            }
+
+            $hasMetodosPago = collect($menuItems)->contains(function ($item) {
+                return ($item['route'] ?? null) === 'metodos-pago.index';
+            });
+
+            if (! $hasMetodosPago) {
+                $menuItems[] = [
+                    'id' => 'fallback-metodos-pago',
+                    'label' => 'Métodos de Pago',
+                    'route' => 'metodos-pago.index',
+                    'icon' => 'FaWallet',
+                    'order' => 88,
+                    'children' => [],
+                ];
+
+                $menuItems = collect($menuItems)
+                    ->values()
+                    ->toArray();
+            }
+
+            $menuItems = $this->sortOwnerMenuItems($menuItems);
+        }
+
         return $menuItems;
+    }
+
+    /**
+     * Ordenar el sidebar del propietario por grupos funcionales.
+     *
+     * @param array $menuItems
+     * @return array
+     */
+    private function sortOwnerMenuItems(array $menuItems): array
+    {
+        $orderMap = [
+            'dashboard' => 10,
+            'usuarios.index' => 20,
+            'categorias.index' => 30,
+            'productos.index' => 40,
+            'proveedores.index' => 50,
+            'compras.index' => 60,
+            'inventarios.index' => 70,
+            'promociones.index' => 80,
+            'pedidos.index' => 90,
+            'ventas.index' => 100,
+            'metodos-pago.index' => 110,
+            'pagos.index' => 120,
+            'creditos.index' => 130,
+            'reportes.index' => 9999,
+        ];
+
+        return collect($menuItems)
+            ->sortBy(function (array $item) use ($orderMap) {
+                return $orderMap[$item['route'] ?? ''] ?? 5000;
+            })
+            ->map(function (array $item) use ($orderMap) {
+                if (!empty($item['children']) && is_array($item['children'])) {
+                    $item['children'] = collect($item['children'])
+                        ->sortBy(function (array $child) use ($orderMap) {
+                            return $orderMap[$child['route'] ?? ''] ?? 5000;
+                        })
+                        ->values()
+                        ->toArray();
+                }
+
+                return $item;
+            })
+            ->values()
+            ->toArray();
     }
 
     /**

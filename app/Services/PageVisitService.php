@@ -29,7 +29,11 @@ class PageVisitService
      */
     public function debeContabilizar($ruta)
     {
-        // Rutas excluidas
+        if (request()->method() !== 'GET') {
+            return false;
+        }
+
+        // Rutas excluidas específicas (formularios, AJAX y rutas internas)
         $rutasExcluidas = [
             'login',
             'register',
@@ -40,8 +44,11 @@ class PageVisitService
             'user/profile-information',
             'user/password',
             'user/two-factor-authentication',
-            'teams',
-            'logout'
+            'user/settings/preferences',
+            'notificaciones/no-leidas',
+            'logout',
+            'api/menu',
+            'api/search/all'
         ];
 
         // Excluir rutas que comienzan con ciertos prefijos
@@ -59,29 +66,6 @@ class PageVisitService
             }
         }
 
-        // Solo contabilizar rutas principales
-        $rutasValidas = [
-            'dashboard',
-            'catalogo',
-            'ventas',
-            'creditos',
-            'pagos',
-            'reportes',
-            'productos',
-            'categorias',
-            'promociones',
-            'pedidos',
-            'carrito',
-            'mis-creditos',
-            'usuarios'
-        ];
-
-        foreach ($rutasValidas as $valida) {
-            if (str_starts_with($ruta, $valida)) {
-                return true;
-            }
-        }
-
-        return false;
+        return true;
     }
 }

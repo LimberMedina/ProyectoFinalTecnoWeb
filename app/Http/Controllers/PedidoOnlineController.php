@@ -3,13 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venta;
+use App\Models\Notification;
 use App\Models\Pago;
 use App\Models\Cuota;
+use App\Models\MovimientoInventario;
+use App\Models\ProductoVariante;
 use App\Models\VentaDetalle;
 use App\Models\Carrito;
 use App\Models\Producto;
 use App\Models\MetodoPago;
 use App\Models\KardexInventario;
+use App\Models\TecnicaCosto;
+use App\Models\TecnicaInventario;
+use App\Services\FifoInventoryService;
 use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +29,8 @@ use Inertia\Inertia;
 class PedidoOnlineController extends Controller
 {
     public function __construct(
-        protected PagoFacilService $pagoFacilService
+        protected PagoFacilService $pagoFacilService,
+        protected FifoInventoryService $fifoInventoryService
     ) {}
 
     /**
@@ -39,7 +46,7 @@ class PedidoOnlineController extends Controller
             $user = auth()->user();
 
             // Obtener carrito del usuario
-            $carrito = Carrito::with('detalles.producto')->where('user_id', $user->id)->first();
+            $carrito = Carrito::with('detalles.variante.producto')->where('user_id', $user->id)->first();
 
             if (!$carrito || $carrito->detalles->count() === 0) {
                 return back()->with('error', 'Tu carrito está vacío');
@@ -52,11 +59,16 @@ class PedidoOnlineController extends Controller
 
             // Calcular total y preparar items
             foreach ($carrito->detalles as $detalle) {
-                $producto = $detalle->producto;
+                $variante = $detalle->variante;
+                $producto = $variante?->producto;
+
+                if (! $variante || ! $producto) {
+                    throw new \Exception('Una de las variantes del carrito no existe.');
+                }
 
                 // Verificar stock
-                if ($producto->stock_actual < $detalle->cantidad) {
-                    throw new \Exception("Stock insuficiente para {$producto->nombre}");
+                if ($variante->stock_actual < $detalle->cantidad) {
+                    throw new \Exception("Stock insuficiente para {$producto->nombre} ({$variante->talla} / {$variante->color})");
                 }
 
                 // Calcular precio con descuento
@@ -66,13 +78,14 @@ class PedidoOnlineController extends Controller
                     ->where('fecha_fin', '>=', now())
                     ->max('valor_descuento_decimal') ?? 0;
 
-                $precioFinal = $producto->precio_venta - ($producto->precio_venta * $descuentoMaximo / 100);
+                $precioFinal = $variante->precio_venta - ($variante->precio_venta * $descuentoMaximo / 100);
                 $subtotal = $precioFinal * $detalle->cantidad;
 
                 $ventaItems[] = [
                     'producto' => $producto,
+                    'variante' => $variante,
                     'cantidad' => $detalle->cantidad,
-                    'precio_unitario' => $producto->precio_venta,
+                    'precio_unitario' => $variante->precio_venta,
                     'descuento' => $descuentoMaximo,
                     'precio_final' => $precioFinal,
                     'subtotal' => $subtotal
@@ -106,7 +119,7 @@ class PedidoOnlineController extends Controller
             foreach ($ventaItems as $item) {
                 VentaDetalle::create([
                     'venta_id' => $venta->id,
-                    'producto_id' => $item['producto']->id,
+                    'id_producto_variante' => $item['variante']->id,
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'descuento' => $item['descuento'],
@@ -187,26 +200,7 @@ class PedidoOnlineController extends Controller
             DB::beginTransaction();
 
             if ($status === 'completed') {
-                // Actualizar estado del pago
-                $venta->update([
-                    'pago_facil_status' => 'completed',
-                    'estado' => 'pagado' // Pasa a pagado, pero no a "enviado" aún
-                ]);
-
-                // AHORA SÍ reducir stock y registrar en kardex
-                foreach ($venta->detalles as $detalle) {
-                    $producto = $detalle->producto;
-                    $producto->decrement('stock_actual', $detalle->cantidad);
-
-                    // Registrar en kardex
-                    KardexInventario::create([
-                        'producto_id' => $producto->id,
-                        'tipo' => 'salida',
-                        'cantidad' => $detalle->cantidad,
-                        'referencia' => "Venta Online {$venta->numero_venta}",
-                        'observaciones' => "Pedido online pagado con QR"
-                    ]);
-                }
+                $this->finalizarVentaConFifo($venta, $request->all(), 'Pedido online pagado con QR');
 
                 DB::commit();
 
@@ -380,29 +374,12 @@ class PedidoOnlineController extends Controller
                 if ($status === 'completed' && $venta->estado !== 'pagado') {
                     DB::transaction(function () use ($venta, $request, $pagofacilTransactionId, $companyTransactionId) {
                         $venta->update([
-                            'estado' => 'pagado',
-                            'pago_facil_status' => 'completed',
                             'pago_facil_transaction_id' => $pagofacilTransactionId ?: $venta->pago_facil_transaction_id,
                             'pago_facil_payment_number' => $companyTransactionId ?: $venta->pago_facil_payment_number,
                             'pago_facil_raw_response' => json_encode($request->all()),
                         ]);
 
-                        foreach ($venta->detalles as $detalle) {
-                            $producto = $detalle->producto;
-                            if (!$producto) {
-                                continue;
-                            }
-
-                            $producto->decrement('stock_actual', $detalle->cantidad);
-
-                            KardexInventario::create([
-                                'producto_id' => $producto->id,
-                                'tipo' => 'salida',
-                                'cantidad' => $detalle->cantidad,
-                                'referencia' => "Venta Online {$venta->numero_venta}",
-                                'observaciones' => 'Pago confirmado vía callback PagoFácil',
-                            ]);
-                        }
+                        $this->finalizarVentaConFifo($venta, $request->all(), 'Pago confirmado vía callback PagoFácil');
                     });
                 } else {
                     $venta->update([
@@ -437,13 +414,9 @@ class PedidoOnlineController extends Controller
                                 'updated_at' => now(),
                             ]);
 
-                            // Verificar crédito
                             $credito = $cuota->credito;
                             if ($credito) {
-                                $todasPagadas = $credito->cuotas()->where('estado', '!=', 'pagado')->count() === 0;
-                                if ($todasPagadas) {
-                                    $credito->update(['estado' => 'pagado']);
-                                }
+                                $credito->sincronizarEstado();
                             }
                         }
                     });
@@ -541,6 +514,19 @@ class PedidoOnlineController extends Controller
 
             $venta->update(['estado' => 'enviado']);
 
+            Notification::create([
+                'user_id' => $venta->user_id,
+                'type' => 'pedido_enviado',
+                'title' => 'Tu pedido fue enviado',
+                'message' => "Tu pedido {$venta->numero_venta} ya fue enviado y está en camino.",
+                'data' => [
+                    'venta_id' => $venta->id,
+                    'numero_venta' => $venta->numero_venta,
+                    'estado' => 'enviado',
+                ],
+                'read' => false,
+            ]);
+
             Log::info('Pedido marcado como enviado', ['venta_id' => $ventaId]);
 
             return redirect()->route('pedidos.index', ['origen' => 'online', 'estado' => 'enviado'])
@@ -607,11 +593,16 @@ class PedidoOnlineController extends Controller
             ]);
 
             // Validar autorización
-            if ($venta->user_id !== auth()->id() && !auth()->user()->esAdministrador()) {
+            if (
+                $venta->user_id !== auth()->id() &&
+                $venta->vendedor_id !== auth()->id() &&
+                !auth()->user()->esAdministrador()
+            ) {
                 Log::warning('⚠️ [Verificación] Acceso no autorizado', [
                     'venta_id' => $ventaId,
                     'usuario_solicitante' => auth()->id(),
-                    'usuario_venta' => $venta->user_id
+                    'usuario_venta' => $venta->user_id,
+                    'vendedor_venta' => $venta->vendedor_id
                 ]);
                 return response()->json(['error' => 'No autorizado'], 403);
             }
@@ -666,42 +657,11 @@ class PedidoOnlineController extends Controller
                 Log::info('💰 [Verificación] Pago confirmado, procesando...', ['venta_id' => $venta->id]);
                 
                 DB::transaction(function () use ($venta, $resultado) {
-                    $venta->update([
-                        'estado' => 'pagado',
-                        'pago_facil_status' => 'completed',
-                        'pago_facil_raw_response' => json_encode($resultado['raw'] ?? $resultado),
-                    ]);
-
-                    Log::info('📦 [Verificación] Reduciendo stock de productos', [
-                        'venta_id' => $venta->id,
-                        'cantidad_productos' => $venta->detalles->count()
-                    ]);
-
-                    // Reducir stock
-                    foreach ($venta->detalles as $detalle) {
-                        $producto = $detalle->producto;
-                        if ($producto) {
-                            $stockAnterior = $producto->stock_actual;
-                            $producto->decrement('stock_actual', $detalle->cantidad);
-                            $stockNuevo = $producto->fresh()->stock_actual;
-
-                            Log::info('📊 [Verificación] Stock actualizado', [
-                                'producto_id' => $producto->id,
-                                'producto_nombre' => $producto->nombre,
-                                'stock_anterior' => $stockAnterior,
-                                'cantidad_vendida' => $detalle->cantidad,
-                                'stock_nuevo' => $stockNuevo
-                            ]);
-
-                            KardexInventario::create([
-                                'producto_id' => $producto->id,
-                                'tipo' => 'salida',
-                                'cantidad' => $detalle->cantidad,
-                                'referencia' => "Venta Online {$venta->numero_venta}",
-                                'observaciones' => 'Pago confirmado vía verificación automática',
-                            ]);
-                        }
-                    }
+                    $this->finalizarVentaConFifo(
+                        $venta,
+                        $resultado['raw'] ?? $resultado,
+                        'Pago confirmado vía verificación automática'
+                    );
                 });
                 
                 Log::info('✅ [Verificación] Pago procesado exitosamente', ['venta_id' => $venta->id]);
@@ -727,5 +687,127 @@ class PedidoOnlineController extends Controller
                 'mensaje' => 'Error al verificar estado: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Finaliza una venta pagada aplicando FIFO por variante y registrando kardex.
+     */
+    protected function finalizarVentaConFifo(Venta $venta, array $rawResponse, string $observaciones): bool
+    {
+        $ventaActual = Venta::whereKey($venta->id)->lockForUpdate()->firstOrFail();
+
+        if ($ventaActual->estado === 'pagado' && $ventaActual->pago_facil_status === 'completed') {
+            Log::info('ℹ️ [Venta] La venta ya estaba procesada, no se vuelve a descontar stock', [
+                'venta_id' => $ventaActual->id,
+            ]);
+
+            return false;
+        }
+
+        $ventaActual->loadMissing(['detalles.variante.producto']);
+
+        $ventaActual->update([
+            'estado' => 'pagado',
+            'pago_facil_status' => 'completed',
+            'pago_facil_raw_response' => json_encode($rawResponse),
+        ]);
+
+        Log::info('📦 [Venta] Aplicando FIFO a la venta pagada', [
+            'venta_id' => $ventaActual->id,
+            'cantidad_productos' => $ventaActual->detalles->count(),
+        ]);
+
+        foreach ($ventaActual->detalles as $detalle) {
+            $variante = ProductoVariante::with('producto')->lockForUpdate()->find($detalle->id_producto_variante);
+            $producto = $variante?->producto;
+
+            if (! $variante || ! $producto) {
+                continue;
+            }
+
+            $stockAnterior = (int) $variante->stock_actual;
+            $fifo = $this->fifoInventoryService->consumirVariante(
+                $variante,
+                (int) $detalle->cantidad,
+                $detalle->id
+            );
+
+            $cantidadVendida = (int) $detalle->cantidad;
+            $stockResultante = max(0, $stockAnterior - $cantidadVendida);
+
+            $detalle->update([
+                'costo_unitario' => $fifo['costo_unitario'],
+                'costo_total' => $fifo['costo_total'],
+                'utilidad_bruta' => round((float) $detalle->subtotal - $fifo['costo_total'], 2),
+            ]);
+
+            $variante->update(['stock_actual' => $stockResultante]);
+
+            $this->registrarMovimientoInventario(
+                $variante,
+                'salida',
+                $cantidadVendida,
+                (float) $fifo['costo_unitario'],
+                $stockAnterior,
+                $stockResultante,
+                "Venta Online {$ventaActual->numero_venta}",
+                $observaciones
+            );
+
+            KardexInventario::create([
+                'producto_id' => $producto->id,
+                'tipo' => 'salida',
+                'cantidad' => $detalle->cantidad,
+                'referencia' => "Venta Online {$ventaActual->numero_venta}",
+                'observaciones' => $observaciones,
+            ]);
+        }
+
+        return true;
+    }
+
+    protected function registrarMovimientoInventario(
+        ProductoVariante $variante,
+        string $tipoMovimiento,
+        int $cantidad,
+        float $costoUnitario,
+        int $stockAnterior,
+        int $stockResultante,
+        string $motivo,
+        string $observacion
+    ): void {
+        $tecnicaInventarioId = $variante->id_tecnica_inventario
+            ?? TecnicaInventario::query()->orderBy('id')->value('id');
+        if (! $tecnicaInventarioId) {
+            $tecnicaInventarioId = TecnicaInventario::query()->firstOrCreate(
+                ['nombre' => 'Automática'],
+                ['descripcion' => 'Técnica creada automáticamente para registrar movimientos']
+            )->id;
+        }
+
+        $tecnicaCostoId = $variante->id_tecnica_costo
+            ?? TecnicaCosto::query()->orderBy('id')->value('id');
+        if (! $tecnicaCostoId) {
+            $tecnicaCostoId = TecnicaCosto::query()->firstOrCreate(
+                ['nombre' => 'Costo automático'],
+                ['descripcion' => 'Técnica creada automáticamente para registrar costos de movimientos']
+            )->id;
+        }
+
+        MovimientoInventario::create([
+            'id_producto' => $variante->id_producto,
+            'id_producto_variante' => $variante->id,
+            'id_tecnica_inventario' => $tecnicaInventarioId,
+            'id_tecnica_costo' => $tecnicaCostoId,
+            'tipo_movimiento' => $tipoMovimiento,
+            'motivo' => $motivo,
+            'cantidad' => $cantidad,
+            'costo_unitario' => $costoUnitario,
+            'costo_total' => round($costoUnitario * $cantidad, 2),
+            'stock_anterior' => $stockAnterior,
+            'stock_resultante' => $stockResultante,
+            'fecha' => now()->toDateString(),
+            'observacion' => $observacion,
+        ]);
     }
 }

@@ -23,11 +23,16 @@ class User extends Authenticatable
         'apellidos',
         'ci',
         'telefono',
+        'direccion',
         'email',
         'password',
         'role_id',
         'estado',
         'fecha_nacimiento',
+        'theme',
+        'mode',
+        'font_size',
+        'contrast',
     ];
 
     /**

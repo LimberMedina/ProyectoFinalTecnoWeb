@@ -6,15 +6,21 @@
         </template>
 
         <template #content>
-            <form @submit.prevent="confirmar">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Cuota a Pagar</label>
+            <form @submit.prevent="confirmar" class="space-y-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-slate-700">
+                        Cuota a Pagar
+                    </label>
                     <select
                         v-model="form.cuota_id"
-                        class="form-select"
-                        :class="{ 'is-invalid': form.errors.cuota_id }"
                         :disabled="!!cuotaPreseleccionada"
                         required
+                        class="w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                        :class="{
+                            'border-rose-500 ring-rose-100':
+                                form.errors.cuota_id,
+                            'border-slate-200': !form.errors.cuota_id,
+                        }"
                     >
                         <option value="">Seleccione una cuota...</option>
                         <option
@@ -28,63 +34,89 @@
                             {{ formatearFecha(cuota.fecha_vencimiento) }})
                         </option>
                     </select>
-                    <div v-if="form.errors.cuota_id" class="invalid-feedback">
+                    <p
+                        v-if="form.errors.cuota_id"
+                        class="text-sm text-rose-600"
+                    >
                         {{ form.errors.cuota_id }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold"
-                            >Monto a Pagar *</label
-                        >
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-700">
+                            Monto a Pagar *
+                        </label>
                         <input
                             v-model="form.monto"
                             type="number"
                             step="0.01"
-                            class="form-control"
-                            :class="{ 'is-invalid': form.errors.monto }"
                             :max="montoPendienteCuota"
                             required
+                            class="w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            :class="{
+                                'border-rose-500 ring-rose-100':
+                                    form.errors.monto,
+                                'border-slate-200': !form.errors.monto,
+                            }"
                         />
-                        <small v-if="cuotaSeleccionada" class="text-muted">
+                        <p
+                            v-if="cuotaSeleccionada"
+                            class="text-sm text-slate-500"
+                        >
                             Máximo:
                             {{
                                 formatearMoneda(
-                                    cuotaSeleccionada.monto_pendiente
+                                    cuotaSeleccionada.monto_pendiente,
                                 )
                             }}
-                        </small>
-                        <div v-if="form.errors.monto" class="invalid-feedback">
+                        </p>
+                        <p
+                            v-if="form.errors.monto"
+                            class="text-sm text-rose-600"
+                        >
                             {{ form.errors.monto }}
-                        </div>
+                        </p>
                     </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold"
-                            >Fecha de Pago *</label
-                        >
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-700">
+                            Fecha de Pago *
+                        </label>
                         <input
                             v-model="form.fecha"
                             type="date"
-                            class="form-control"
-                            :class="{ 'is-invalid': form.errors.fecha }"
                             :max="new Date().toISOString().split('T')[0]"
                             required
+                            class="w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            :class="{
+                                'border-rose-500 ring-rose-100':
+                                    form.errors.fecha,
+                                'border-slate-200': !form.errors.fecha,
+                            }"
                         />
-                        <div v-if="form.errors.fecha" class="invalid-feedback">
+                        <p
+                            v-if="form.errors.fecha"
+                            class="text-sm text-rose-600"
+                        >
                             {{ form.errors.fecha }}
-                        </div>
+                        </p>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Método de Pago *</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-slate-700">
+                        Método de Pago *
+                    </label>
                     <select
                         v-model="form.metodo_pago_id"
-                        class="form-select"
-                        :class="{ 'is-invalid': form.errors.metodo_pago_id }"
                         required
+                        class="w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                        :class="{
+                            'border-rose-500 ring-rose-100':
+                                form.errors.metodo_pago_id,
+                            'border-slate-200': !form.errors.metodo_pago_id,
+                        }"
                     >
                         <option value="">Seleccione...</option>
                         <option
@@ -95,23 +127,29 @@
                             {{ metodo.nombre }}
                         </option>
                     </select>
-                    <div
+                    <p
                         v-if="form.errors.metodo_pago_id"
-                        class="invalid-feedback"
+                        class="text-sm text-rose-600"
                     >
                         {{ form.errors.metodo_pago_id }}
-                    </div>
+                    </p>
                 </div>
-                <!-- Integración PagoFácil QR -->
-                <div v-if="isMetodoQrSelected" class="mb-3">
-                    <div v-if="!qrImage">
+
+                <div
+                    v-if="isMetodoQrSelected"
+                    class="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-4"
+                >
+                    <div
+                        v-if="!qrImage"
+                        class="flex items-center justify-between gap-3"
+                    >
                         <button
                             type="button"
-                            class="btn btn-outline-primary"
+                            class="inline-flex items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                             @click="generarQr"
                             :disabled="generatingQr"
                         >
-                            <i class="bi bi-qr-code me-2"></i>
+                            <i class="bi bi-qr-code mr-2"></i>
                             {{
                                 generatingQr
                                     ? "Generando QR..."
@@ -120,25 +158,27 @@
                         </button>
                     </div>
 
-                    <div v-else class="mt-3">
-                        <p class="mb-2">
+                    <div v-else class="space-y-4">
+                        <p class="text-sm text-slate-600">
                             Escanee este código QR con su app bancaria:
                         </p>
-                        <div class="d-flex justify-content-center mb-2">
+                        <div class="flex justify-center">
                             <img
                                 :src="qrImage"
                                 alt="QR Pago"
-                                style="max-width: 260px"
+                                class="max-w-[260px] rounded-3xl border border-slate-200 bg-white p-3"
                             />
                         </div>
-                        <div class="d-flex gap-2 justify-content-center">
+                        <div
+                            class="flex flex-col gap-3 sm:flex-row sm:justify-center"
+                        >
                             <button
                                 type="button"
-                                class="btn btn-success"
+                                class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 @click="verificarEstado(true)"
                                 :disabled="verifying"
                             >
-                                <i class="bi bi-check2-circle me-2"></i>
+                                <i class="bi bi-check2-circle mr-2"></i>
                                 {{
                                     verifying
                                         ? "Verificando..."
@@ -147,7 +187,7 @@
                             </button>
                             <button
                                 type="button"
-                                class="btn btn-outline-secondary"
+                                class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                                 @click="
                                     qrImage = null;
                                     if (pollInterval) {
@@ -156,12 +196,15 @@
                                     }
                                 "
                             >
-                                <i class="bi bi-x-circle me-2"></i>
+                                <i class="bi bi-x-circle mr-2"></i>
                                 Cancelar QR
                             </button>
                         </div>
-                        <p class="text-muted mt-2">
-                            Estado: {{ verifyStatus || "pendiente" }}
+                        <p class="text-sm text-slate-500">
+                            Estado:
+                            <span class="font-semibold text-slate-700">{{
+                                verifyStatus || "pendiente"
+                            }}</span>
                         </p>
                     </div>
                 </div>
@@ -169,19 +212,26 @@
         </template>
 
         <template #footer>
-            <SecondaryButton @click="closeModal">
-                <i class="bi bi-x-circle me-2"></i>
-                Cancelar
-            </SecondaryButton>
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                    type="button"
+                    @click="closeModal"
+                    class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                    <i class="bi bi-x-circle mr-2"></i>
+                    Cancelar
+                </button>
 
-            <PrimaryButton
-                class="ms-3"
-                @click="confirmar"
-                :disabled="form.processing"
-            >
-                <i class="bi bi-check-circle me-2"></i>
-                Registrar Pago
-            </PrimaryButton>
+                <button
+                    type="button"
+                    @click="confirmar"
+                    :disabled="form.processing"
+                    class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <i class="bi bi-check-circle mr-2"></i>
+                    Registrar Pago
+                </button>
+            </div>
         </template>
     </DialogModal>
 </template>
@@ -225,7 +275,7 @@ let pollInterval = null;
 
 const isMetodoQrSelected = computed(() => {
     const metodo = props.metodosPago?.find(
-        (m) => String(m.id) === String(form.metodo_pago_id)
+        (m) => String(m.id) === String(form.metodo_pago_id),
     );
     return metodo && String(metodo.nombre).toLowerCase().includes("qr");
 });
@@ -318,13 +368,13 @@ watch(
             }
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const cuotasPendientes = computed(() => {
     return (
         props.cuotas?.filter(
-            (c) => c.estado === "pendiente" || c.estado === "vencido"
+            (c) => c.estado === "pendiente" || c.estado === "vencido",
         ) || []
     );
 });
@@ -346,7 +396,7 @@ watch(
                 form.monto = cuota.monto_pendiente;
             }
         }
-    }
+    },
 );
 
 const formatearMoneda = (valor) => {

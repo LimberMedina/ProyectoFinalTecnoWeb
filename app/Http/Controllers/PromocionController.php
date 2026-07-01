@@ -14,24 +14,42 @@ class PromocionController extends Controller
 {
     public function __construct()
     {
-        $this->authorizeResource(Promocion::class, 'promocion');
+        // Aplicar autorización solo a métodos que la necesitan (create, store, edit, update, delete)
+        $this->middleware('can:create,App\Models\Promocion')->only('create', 'store');
+        $this->middleware('can:update,promocion')->only('edit', 'update');
+        $this->middleware('can:delete,promocion')->only('destroy');
     }
 
     public function index(Request $request)
     {
         $search = $request->input('search', '');
+        $user = $request->user();
+        $isOwner = $user?->esPropietario() ?? false;
         
         $promociones = Promocion::with(['productos', 'categorias'])
             ->when($search, function ($query, $search) {
-                $query->where('nombre', 'ilike', "%{$search}%");
+                $query->where('nombre', 'ilike', "%{$search}%")
+                      ->orWhere('descripcion', 'ilike', "%{$search}%");
+            })
+            // Si no es propietario, solo mostrar promociones activas y vigentes
+            ->when(!$isOwner, function ($query) {
+                $query->where('estado', true)
+                      ->where('fecha_inicio', '<=', now())
+                      ->where('fecha_fin', '>=', now());
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
+        $rol = 'cliente';
+        if ($user && $user->role) {
+            $rol = $user->role->nombre;
+        }
+
         return Inertia::render('Promociones/Index', [
             'promociones' => $promociones,
             'filters' => ['search' => $search],
+            'rol' => $rol,
         ]);
     }
 
@@ -87,13 +105,36 @@ class PromocionController extends Controller
 
     public function show(Promocion $promocion)
     {
+        $user = auth()->user();
+        $isOwner = $user?->esPropietario() ?? false;
+
+        // Si no es propietario, verificar que la promoción esté activa y vigente
+        if (!$isOwner) {
+            if (!$promocion->estado || 
+                $promocion->fecha_inicio > now() || 
+                $promocion->fecha_fin < now()) {
+                abort(403, 'Esta promoción no está disponible en este momento.');
+            }
+        }
+
         $promocion->load([
             'productos' => function ($query) {
-                $query->withPivot('aplica_mayorista', 'aplica_minorista');
+                $query->with([
+                    'imagenes',
+                    'categoria:id,nombre',
+                    'variantes',
+                ])->withPivot('aplica_mayorista', 'aplica_minorista');
             },
             'categorias' => function ($query) {
                 $query->withPivot('aplica_mayorista', 'aplica_minorista');
-            }
+            },
+            'categorias.productos' => function ($query) {
+                $query->with([
+                    'imagenes',
+                    'categoria:id,nombre',
+                    'variantes',
+                ]);
+            },
         ]);
 
         return Inertia::render('Promociones/Show', [

@@ -87,6 +87,7 @@
 <script setup>
 import { ref } from "vue";
 import axios from "axios";
+import { showToast } from "@/utils/toast";
 
 const props = defineProps({
     cuota: Object,
@@ -105,8 +106,13 @@ const generarQR = async () => {
             monto: props.cuota.monto_pendiente + (props.cuota.mora || 0),
         });
         qrData.value = response.data;
+        showToast(
+            "QR generado correctamente. Escanea el código para completar el pago.",
+            "success",
+        );
     } catch (error) {
         console.error("Error generando QR:", error);
+        showToast("No se pudo generar el QR. Intenta nuevamente.", "error");
     } finally {
         loading.value = false;
     }

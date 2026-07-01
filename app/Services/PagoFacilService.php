@@ -19,6 +19,8 @@ class PagoFacilService
     protected ?float $qrOverrideAmount = null;
     protected ?string $callbackUrl = null;
     protected ?string $responseLanguage = null;
+    protected int $qrPaymentMethod;
+    protected array $qrPaymentMethodCandidates = [];
 
     public function __construct()
     {
@@ -28,6 +30,10 @@ class PagoFacilService
         $this->apiUrl = $config['api_url'] ?? 'https://masterqr.pagofacil.com.bo/api/services/v2';
         $this->tcTokenService = $config['tc_token_service'] ?? null;
         $this->tcTokenSecret = $config['tc_token_secret'] ?? null;
+        $this->qrPaymentMethod = (int) ($config['payment_method_qr'] ?? 4);
+        $this->qrPaymentMethodCandidates = $this->buildQrPaymentMethodCandidates(
+            $config['payment_method_qr_candidates'] ?? []
+        );
 
         if (isset($config['override_amount']) && $config['override_amount'] !== null && $config['override_amount'] !== '') {
             $this->qrOverrideAmount = (float) $config['override_amount'];
@@ -123,6 +129,87 @@ class PagoFacilService
     }
 
     /**
+     * Construir la lista de candidatos para paymentMethod QR.
+     */
+    protected function buildQrPaymentMethodCandidates(array $configuredCandidates): array
+    {
+        $candidates = collect($configuredCandidates)
+            ->map(fn ($candidate) => (int) $candidate)
+            ->filter(fn (int $candidate) => $candidate > 0)
+            ->values()
+            ->all();
+
+        if (empty($candidates)) {
+            $candidates = [
+                $this->qrPaymentMethod,
+                1, 2, 3, 5, 6, 7, 8, 9, 10,
+            ];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $candidates),
+            fn (int $candidate) => $candidate > 0
+        )));
+    }
+
+    /**
+     * Listar servicios/métodos habilitados para la empresa.
+     */
+    protected function listEnabledServices(): array
+    {
+        $cacheKey = 'pagofacil_enabled_services';
+        $cachedServices = Cache::get($cacheKey);
+
+        if (is_array($cachedServices)) {
+            return $cachedServices;
+        }
+
+        $headers = $this->obtenerHeaders();
+        $response = Http::withHeaders($headers)
+            ->post("{$this->apiUrl}/list-enabled-services");
+
+        if (! $response->successful()) {
+            throw new \Exception('Error al listar métodos habilitados: ' . $response->body());
+        }
+
+        $data = $response->json();
+        $services = $data['values'] ?? [];
+
+        Cache::put($cacheKey, $services, now()->addHour());
+
+        return $services;
+    }
+
+    /**
+     * Resolver el paymentMethodId QR habilitado para la empresa.
+     */
+    protected function resolveQrPaymentMethodId(): int
+    {
+        $enabledServices = $this->listEnabledServices();
+
+        foreach ($enabledServices as $service) {
+            $serviceName = strtoupper((string) ($service['paymentMethodName'] ?? ''));
+            $currencyName = strtoupper((string) ($service['currencyName'] ?? ''));
+
+            if (str_contains($serviceName, 'QR') && $currencyName === 'BOB') {
+                return (int) ($service['paymentMethodId'] ?? 0);
+            }
+        }
+
+        foreach ($enabledServices as $service) {
+            if (strtoupper((string) ($service['currencyName'] ?? '')) === 'BOB') {
+                return (int) ($service['paymentMethodId'] ?? 0);
+            }
+        }
+
+        if ($this->qrPaymentMethod > 0) {
+            return $this->qrPaymentMethod;
+        }
+
+        throw new \Exception('No se encontró ningún método de pago QR habilitado para la empresa.');
+    }
+
+    /**
      * Generar QR para pago (método principal de la API)
      */
     public function generateQr(array $datos): array
@@ -195,9 +282,10 @@ class PagoFacilService
             ]);
             
             $montoQr = $this->resolverMontoQr($monto);
+            $paymentMethodId = $this->resolveQrPaymentMethodId();
 
             $qrData = [
-                'paymentMethod' => 4, // QR Simple
+                'paymentMethod' => $paymentMethodId,
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
@@ -208,6 +296,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $ventaId,
                 'companyTransactionId' => $companyTransactionId,
+                'callbackUrl' => $this->callbackUrl,
                 'tcUrlCallBack' => $this->callbackUrl,
                 'orderDetail' => [
                     [
@@ -223,7 +312,7 @@ class PagoFacilService
 
             Log::info('📋 [PagoFácil] Datos preparados para venta', ['qr_data' => $qrData]);
 
-            // Generar QR real
+            // Generar QR real usando el método habilitado para QR
             $response = $this->generateQr($qrData);
 
             Log::info('✅ [PagoFácil] QR generado exitosamente para venta', [
@@ -283,9 +372,10 @@ class PagoFacilService
             ]);
             
             $montoQr = $this->resolverMontoQr($monto);
+            $paymentMethodId = $this->resolveQrPaymentMethodId();
 
             $qrData = [
-                'paymentMethod' => 4, // QR Simple
+                'paymentMethod' => $paymentMethodId,
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
@@ -296,6 +386,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $cuotaId,
                 'companyTransactionId' => $companyTransactionId,
+                'callbackUrl' => $this->callbackUrl,
                 'tcUrlCallBack' => $this->callbackUrl,
                 'orderDetail' => [
                     [
@@ -311,7 +402,7 @@ class PagoFacilService
 
             Log::info('📋 [PagoFácil] Datos preparados para cuota', ['qr_data' => $qrData]);
 
-            // Generar QR real
+            // Generar QR real usando el método habilitado para QR
             $response = $this->generateQr($qrData);
 
             Log::info('✅ [PagoFácil] QR generado exitosamente para cuota', [

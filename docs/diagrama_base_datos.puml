@@ -1,0 +1,337 @@
+@startuml
+' Diagrama Entidad-Relación - Base de datos: tienda_elena
+' Motor: PostgreSQL
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor #F8F9FA
+    BorderColor     #495057
+    HeaderBackgroundColor #343A40
+    HeaderFontColor #FFFFFF
+    FontSize 11
+    AttributeFontSize 10
+}
+
+' ============================================================
+' SEGURIDAD / AUTENTICACIÓN
+' ============================================================
+entity "roles" as roles {
+    * id          <<PK>>
+    --
+    * nombre
+      descripcion
+}
+
+entity "users" as users {
+    * id             <<PK>>
+    --
+    * nombre
+    * apellidos
+    * ci             <<UQ>>
+    * telefono
+      email          <<UQ>>
+    * password
+    * estado
+      fecha_nacimiento
+    * role_id        <<FK>>
+}
+
+entity "password_reset_tokens" as prt {
+    * email   <<PK>>
+    --
+    * token
+}
+
+entity "sessions" as sessions {
+    * id      <<PK>>
+    --
+      user_id <<FK>>
+}
+
+entity "personal_access_tokens" as pat {
+    * id             <<PK>>
+    --
+    * tokenable_type
+    * tokenable_id
+    * name
+    * token          <<UQ>>
+      abilities
+}
+
+entity "failed_jobs" as failed_jobs {
+    * id         <<PK>>
+    --
+    * uuid       <<UQ>>
+    * connection
+    * queue
+    * failed_at
+}
+
+' ============================================================
+' MENÚ / CONFIGURACIÓN
+' ============================================================
+entity "menu_items" as menu_items {
+    * id           <<PK>>
+    --
+    * etiqueta
+    * ruta_laravel
+      icono
+    * orden
+    * role_id      <<FK>>
+      parent_id    <<FK>>
+}
+
+entity "metodos_pago" as metodos_pago {
+    * id  <<PK>>
+    --
+    * nombre
+      descripcion
+}
+
+' ============================================================
+' CATÁLOGO
+' ============================================================
+entity "categorias" as categorias {
+    * id  <<PK>>
+    --
+    * nombre
+      descripcion
+}
+
+entity "productos" as productos {
+    * id                     <<PK>>
+    --
+    * nombre
+    * codigo                 <<UQ>>
+    * precio_compra
+    * precio_venta
+    * precio_venta_mayorista
+    * stock_actual
+    * stock_minimo
+      marca
+      categoria_id           <<FK>>
+    * estado
+}
+
+entity "product_images" as product_images {
+    * id          <<PK>>
+    --
+    * producto_id <<FK>>
+    * url
+}
+
+entity "kardex_inventario" as kardex {
+    * id          <<PK>>
+    --
+    * producto_id <<FK>>
+    * tipo
+    * cantidad
+      referencia
+      observaciones
+}
+
+' ============================================================
+' PROMOCIONES
+' ============================================================
+entity "promociones" as promociones {
+    * id                      <<PK>>
+    --
+    * nombre
+      descripcion
+    * valor_descuento_decimal
+    * fecha_inicio
+    * fecha_fin
+    * estado
+}
+
+entity "promocion_categorias" as promo_cat {
+    * id               <<PK>>
+    --
+    * promocion_id     <<FK>>
+    * categoria_id     <<FK>>
+    * aplica_mayorista
+    * aplica_minorista
+}
+
+entity "promocion_productos" as promo_prod {
+    * id               <<PK>>
+    --
+    * promocion_id     <<FK>>
+    * producto_id      <<FK>>
+    * aplica_mayorista
+    * aplica_minorista
+}
+
+' ============================================================
+' VENTAS
+' ============================================================
+entity "ventas" as ventas {
+    * id                        <<PK>>
+    --
+      numero_venta              <<UQ>>
+    * user_id                   <<FK>>
+    * vendedor_id               <<FK>>
+    * metodo_pago_id            <<FK>>
+    * tipo_pago
+    * total
+    * estado
+    * origen
+      observaciones
+      direccion_entrega
+      pago_facil_transaction_id
+      pago_facil_payment_number
+      pago_facil_status
+}
+
+entity "detalle_venta" as detalle_venta {
+    * id              <<PK>>
+    --
+    * venta_id        <<FK>>
+    * producto_id     <<FK>>
+    * cantidad
+    * precio_unitario
+    * subtotal
+    * descuento
+}
+
+' ============================================================
+' CRÉDITOS / CUOTAS / PAGOS
+' ============================================================
+entity "creditos" as creditos {
+    * id                 <<PK>>
+    --
+    * venta_id           <<FK>>
+    * monto_credito
+    * interes
+    * cuotas_total
+    * dias_mora
+    * monto_pagado
+    * monto_pendiente
+    * fecha_otorgamiento
+    * fecha_vencimiento
+    * estado
+}
+
+entity "cuotas" as cuotas {
+    * id                <<PK>>
+    --
+    * credito_id        <<FK>>
+    * numero_cuota
+    * monto
+    * interes_cuota
+    * dias_mora
+    * monto_pagado
+    * monto_pendiente
+    * fecha_vencimiento
+    * estado
+}
+
+entity "pagos" as pagos {
+    * id                        <<PK>>
+    --
+    * cuota_id                  <<FK>>
+    * metodo_pago_id            <<FK>>
+    * monto
+    * recargo_extra
+    * interes_mora_cobrado
+    * fecha
+      pago_facil_transaction_id
+      pago_facil_payment_number
+      pago_facil_status
+}
+
+' ============================================================
+' CARRITO
+' ============================================================
+entity "carritos" as carritos {
+    * id      <<PK>>
+    --
+    * user_id <<FK>>
+}
+
+entity "carrito_detalle" as carrito_detalle {
+    * id              <<PK>>
+    --
+    * carrito_id      <<FK>>
+    * producto_id     <<FK>>
+    * cantidad
+    * precio_unitario
+    * descuento
+}
+
+' ============================================================
+' OTROS
+' ============================================================
+entity "reportes" as reportes {
+    * id               <<PK>>
+    --
+    * user_id          <<FK>>
+    * tipo_reporte
+      parametros
+    * fecha_generacion
+}
+
+entity "notifications" as notifications {
+    * id      <<PK>>
+    --
+    * user_id <<FK>>
+    * type
+    * title
+    * message
+      data
+    * read
+      read_at
+}
+
+entity "page_visits" as page_visits {
+    * id       <<PK>>
+    --
+    * ruta     <<UQ>>
+    * contador
+}
+
+' ============================================================
+' RELACIONES
+' ============================================================
+
+' Seguridad / acceso
+roles        ||--o{ users          : "tiene"
+roles        ||--o{ menu_items     : "pertenece a"
+menu_items   ||--o{ menu_items     : "parent_id"
+
+' Usuarios
+users        ||--o{ ventas         : "cliente (user_id)"
+users        ||--o{ ventas         : "vendedor (vendedor_id)"
+users        ||--o{ carritos       : "tiene"
+users        ||--o{ reportes       : "genera"
+users        ||--o{ notifications  : "recibe"
+
+' Catálogo
+categorias   ||--o{ productos      : "clasifica"
+productos    ||--o{ product_images : "tiene"
+productos    ||--o{ detalle_venta  : "aparece en"
+productos    ||--o{ carrito_detalle : "en carrito"
+productos    ||--o{ kardex         : "movimiento"
+
+' Promociones
+promociones  ||--o{ promo_cat      : "aplica a"
+promociones  ||--o{ promo_prod     : "aplica a"
+categorias   ||--o{ promo_cat      : "afectada por"
+productos    ||--o{ promo_prod     : "afectado por"
+
+' Ventas
+metodos_pago ||--o{ ventas         : "usado en"
+ventas       ||--o{ detalle_venta  : "contiene"
+ventas       ||--|{ creditos       : "genera"
+
+' Créditos
+creditos     ||--o{ cuotas         : "dividido en"
+cuotas       ||--o{ pagos          : "registra pago"
+metodos_pago ||--o{ pagos          : "usado en"
+
+' Carrito
+carritos     ||--o{ carrito_detalle : "contiene"
+
+@enduml

@@ -36,13 +36,26 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user() ? array_merge(
-                    $request->user()->toArray(),
+                'user' => $user ? array_merge(
+                    $user->toArray(),
                     [
-                        'roles' => $request->user()->role ? [$request->user()->role->nombre] : [],
-                        'profile_photo_url' => $request->user()->profile_photo_url ?? null,
+                        'direccion' => $user->direccion,
+                        'role' => $user->role ? [
+                            'id' => $user->role->id,
+                            'nombre' => $user->role->nombre,
+                        ] : null,
+                        'roles' => $user->role ? [$user->role->nombre] : [],
+                        'profile_photo_url' => $user->profile_photo_path
+                            ? '/storage/' . ltrim($user->profile_photo_path, '/')
+                            : null,
+                        'theme' => $user->theme ?? '',
+                        'mode' => $user->mode ?? 'dia',
+                        'font_size' => $user->font_size ?? 'normal',
+                        'contrast' => $user->contrast ?? 'normal',
                     ]
                 ) : null,
                 // Compartir permisos dinámicos para vistas Vue
@@ -72,6 +85,18 @@ class HandleInertiaRequests extends Middleware
                             'update' => $hasAccess('productos.edit'),
                             'delete' => $hasAccess('productos.destroy'),
                         ],
+                        'proveedores' => [
+                            'viewAny' => $user->can('viewAny', \App\Models\Proveedor::class),
+                            'create' => $user->can('create', \App\Models\Proveedor::class),
+                            'update' => $hasAccess('proveedores.edit'),
+                            'delete' => $hasAccess('proveedores.destroy'),
+                        ],
+                        'compras' => [
+                            'viewAny' => $user->can('viewAny', \App\Models\Compra::class),
+                            'create' => $user->can('create', \App\Models\Compra::class),
+                            'update' => $hasAccess('compras.edit'),
+                            'delete' => $hasAccess('compras.destroy'),
+                        ],
                         'categorias' => [
                             'viewAny' => $user->can('viewAny', \App\Models\Categoria::class),
                             'create' => $user->can('create', \App\Models\Categoria::class),
@@ -83,6 +108,11 @@ class HandleInertiaRequests extends Middleware
                             'create' => $user->can('create', \App\Models\Promocion::class),
                             'update' => $hasAccess('promociones.edit'),
                             'delete' => $hasAccess('promociones.destroy'),
+                        ],
+                        'ventas' => [
+                            'viewAny' => $user->can('viewAny', \App\Models\Venta::class),
+                            'update' => $hasAccess('ventas.update'),
+                            'delete' => $hasAccess('ventas.destroy'),
                         ],
                     ];
                 },
@@ -110,20 +140,30 @@ class HandleInertiaRequests extends Middleware
                     'route' => $ruta,
                 ];
             },
-            // Contador del carrito - Cantidad de tipos de productos
+            // Contador del carrito - Variantes diferentes
             'cartCount' => function () use ($request) {
                 if (!$request->user()) {
                     return 0;
                 }
-                
+
                 $carrito = \App\Models\Carrito::where('user_id', $request->user()->id)->first();
-                
+
                 if (!$carrito) {
                     return 0;
                 }
-                
-                // Retornar la cantidad de tipos de productos diferentes (no la suma de cantidades)
-                return $carrito->detalles()->count();
+
+                return (int) $carrito->detalles()
+                    ->distinct('producto_variante_id')
+                    ->count('producto_variante_id');
+            },
+            'unreadNotificationsCount' => function () use ($request) {
+                if (! $request->user()) {
+                    return 0;
+                }
+
+                return (int) \App\Models\Notification::forUser($request->user()->id)
+                    ->unread()
+                    ->count();
             },
         ]);
     }

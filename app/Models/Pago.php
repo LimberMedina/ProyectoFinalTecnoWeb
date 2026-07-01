@@ -51,4 +51,54 @@ class Pago extends Model
     {
         return $this->belongsTo(MetodoPago::class, 'metodo_pago_id');
     }
+
+    /**
+     * Booted model events: recalcular montos de la cuota y sincronizar
+     * el crédito relacionado cuando un pago cambia.
+     */
+    protected static function booted()
+    {
+        static::saved(function (Pago $pago) {
+            $cuota = $pago->cuota;
+            if (! $cuota) return;
+
+            // Sumar pagos efectivos: pagos completados o pagos manuales (sin status)
+            $montoPagado = $cuota->pagos()
+                ->where(function ($q) {
+                    $q->where('pago_facil_status', 'completed')
+                      ->orWhereNull('pago_facil_status');
+                })
+                ->sum('monto');
+
+            $mora = $cuota->mora ?? 0;
+            $nuevoMontoPendiente = max(0, ($cuota->monto + $mora) - $montoPagado);
+
+            $cuota->monto_pagado = (float) $montoPagado;
+            $cuota->monto_pendiente = (float) $nuevoMontoPendiente;
+            if ($cuota->monto_pendiente <= 0.01) {
+                $cuota->estado = 'pagada';
+                $cuota->monto_pendiente = 0;
+            }
+
+            $cuota->save();
+        });
+
+        static::deleted(function (Pago $pago) {
+            $cuota = $pago->cuota;
+            if (! $cuota) return;
+
+            $montoPagado = $cuota->pagos()
+                ->where(function ($q) {
+                    $q->where('pago_facil_status', 'completed')
+                      ->orWhereNull('pago_facil_status');
+                })
+                ->sum('monto');
+
+            $mora = $cuota->mora ?? 0;
+            $cuota->monto_pagado = (float) $montoPagado;
+            $cuota->monto_pendiente = max(0, ($cuota->monto + $mora) - $montoPagado);
+            $cuota->estado = $cuota->monto_pendiente > 0 ? 'pendiente' : 'pagada';
+            $cuota->save();
+        });
+    }
 }

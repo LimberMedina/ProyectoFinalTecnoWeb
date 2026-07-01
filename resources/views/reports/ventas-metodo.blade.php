@@ -41,10 +41,10 @@
                 @php $totalVentas = 0; $totalMonto = 0; @endphp
                 @foreach($datos as $metodo)
                 <tr>
-                    <td>{{ ucfirst($metodo->metodo_pago) }}</td>
-                    <td class="text-center">{{ $metodo->cantidad }}</td>
-                    <td class="text-right">Bs. {{ number_format($metodo->monto_total, 2) }}</td>
-                    <td class="text-right">Bs. {{ number_format($metodo->monto_total / $metodo->cantidad, 2) }}</td>
+                    <td>{{ ucfirst(data_get($metodo, 'metodo_pago') ?: data_get($metodo, 'metodoPago.nombre') ?: 'N/A') }}</td>
+                    <td class="text-center">{{ data_get($metodo, 'cantidad', 0) }}</td>
+                    <td class="text-right">Bs. {{ number_format(data_get($metodo, 'monto_total', 0), 2) }}</td>
+                    <td class="text-right">Bs. {{ number_format(data_get($metodo, 'monto_total', 0) / max(data_get($metodo, 'cantidad', 1), 1), 2) }}</td>
                 </tr>
                 @php 
                     $totalVentas += $metodo->cantidad; 

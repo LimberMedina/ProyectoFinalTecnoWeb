@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\Categoria;
+use App\Models\MetodoPago;
+use App\Models\User;
 use App\Http\Requests\StoreProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
 use Illuminate\Http\Request;
@@ -22,11 +24,11 @@ use Inertia\Inertia;
 class ProductoController extends Controller
 {
     /**
-     * Constructor - Registrar Policy
+     * Constructor - el catálogo público no usa authorizeResource.
+     * Las acciones de escritura quedan protegidas por middleware y/o rutas específicas.
      */
     public function __construct()
     {
-        $this->authorizeResource(Producto::class, 'producto');
     }
 
     /**
@@ -39,8 +41,95 @@ class ProductoController extends Controller
     {
         $search = $request->input('search', '');
         $categoriaId = $request->input('categoria', '');
+        $highlight = $request->input('highlight', '');
+
+        $rol = 'cliente';
+        if ($request->user() && $request->user()->role) {
+            $rol = $request->user()->role->nombre;
+        }
+
+        // Flujo específico de vendedor: listado por producto principal.
+        if ($request->user() && $request->user()->esVendedor()) {
+            $talla = $request->input('talla', '');
+            $color = $request->input('color', '');
+
+            $productos = Producto::with([
+                    'categoria',
+                    'variantes' => function ($query) {
+                        $query->orderBy('id');
+                    },
+                ])
+                ->when($search, function ($query, $search) {
+                    $query->where(function ($productoQuery) use ($search) {
+                        $productoQuery->where('nombre', 'ilike', "%{$search}%")
+                            ->orWhere('codigo', 'ilike', "%{$search}%")
+                            ->orWhereHas('variantes', function ($varianteQuery) use ($search) {
+                                $varianteQuery->where('sku', 'ilike', "%{$search}%");
+                            });
+                    });
+                })
+                ->when($categoriaId, function ($query, $categoriaId) {
+                    $query->where('categoria_id', $categoriaId);
+                })
+                ->when($talla, function ($query, $talla) {
+                    $query->whereHas('variantes', function ($varianteQuery) use ($talla) {
+                        $varianteQuery->where('talla', 'ilike', "%{$talla}%");
+                    });
+                })
+                ->when($color, function ($query, $color) {
+                    $query->whereHas('variantes', function ($varianteQuery) use ($color) {
+                        $varianteQuery->where('color', 'ilike', "%{$color}%");
+                    });
+                })
+                ->whereHas('variantes')
+                ->orderBy('created_at', 'desc')
+                ->paginate(12)
+                ->withQueryString();
+
+            $categorias = Categoria::select('id', 'nombre')
+                ->orderBy('nombre')
+                ->get();
+
+            $clientes = User::with('role')
+                ->whereHas('role', function ($query) {
+                    $query->whereRaw('LOWER(nombre) = ?', ['cliente']);
+                })
+                ->where('estado', true)
+                ->select('id', 'nombre', 'apellidos', 'email', 'ci')
+                ->orderBy('nombre')
+                ->limit(300)
+                ->get();
+
+            $metodosPago = MetodoPago::query()
+                ->select('id', 'nombre')
+                ->orderBy('nombre')
+                ->get()
+                ->map(function ($metodo) {
+                    return [
+                        'id' => $metodo->id,
+                        'nombre' => $metodo->nombre,
+                        'valor' => mb_strtolower(trim((string) $metodo->nombre)),
+                    ];
+                })
+                ->values();
+
+            return Inertia::render('Productos/IndexVendedor', [
+                'productos' => $productos,
+                'categorias' => $categorias,
+                'clientes' => $clientes,
+                'metodosPago' => $metodosPago,
+                'filters' => [
+                    'search' => $search,
+                    'categoria' => $categoriaId,
+                    'talla' => $talla,
+                    'color' => $color,
+                    'highlight' => $highlight,
+                ],
+                'rol' => $rol,
+            ]);
+        }
         
-        $productos = Producto::with(['categoria', 'imagenes'])
+        $productos = Producto::with(['categoria', 'variantes'])
             ->when($search, function ($query, $search) {
                 $query->where('nombre', 'ilike', "%{$search}%")
                       ->orWhere('codigo', 'ilike', "%{$search}%");
@@ -51,11 +140,6 @@ class ProductoController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
-
-        $rol = 'propietario'; // default
-        if ($request->user() && $request->user()->role) {
-            $rol = $request->user()->role->nombre;
-        }
 
         // Obtener todas las categorías para el filtro
         $categorias = Categoria::select('id', 'nombre')
@@ -68,6 +152,7 @@ class ProductoController extends Controller
             'filters' => [
                 'search' => $search,
                 'categoria' => $categoriaId,
+                'highlight' => $highlight,
             ],
             'rol' => $rol,
         ]);
@@ -78,7 +163,7 @@ class ProductoController extends Controller
      * 
      * Muestra formulario de creación con lista de categorías
      */
-    public function create()
+    public function create(Request $request)
     {
         $categorias = Categoria::select('id', 'nombre')
             ->orderBy('nombre')
@@ -86,6 +171,7 @@ class ProductoController extends Controller
 
         return Inertia::render('Productos/Create', [
             'categorias' => $categorias,
+            'categoriaId' => $request->input('categoria'),
         ]);
     }
 
@@ -97,24 +183,11 @@ class ProductoController extends Controller
      */
     public function store(StoreProductoRequest $request)
     {
-        $data = $request->validated();
+        $data = $this->buildProductoData($request, null);
 
-        // Crear producto sin imagen
-        $producto = Producto::create($data);
+        Producto::create($data);
 
-        // Manejar upload de imágenes (puede ser 1 o múltiples)
-        if ($request->hasFile('imagen')) {
-            $imagenes = is_array($request->file('imagen')) 
-                ? $request->file('imagen') 
-                : [$request->file('imagen')];
-
-            foreach ($imagenes as $imagen) {
-                $path = $imagen->store('productos', 'public');
-                $producto->imagenes()->create(['url' => $path]);
-            }
-        }
-
-        return redirect()->route('productos.index')
+        return redirect()->route('productos.index', [], 303)
             ->with('success', 'Producto creado exitosamente.');
     }
 
@@ -123,11 +196,15 @@ class ProductoController extends Controller
      * 
      * Vista detalle de un producto
      */
-    public function show(Request $request, Producto $producto)
+    public function show(Request $request, $productoId)
     {
-        $producto->load(['categoria', 'promociones', 'imagenes']);
+        $producto = Producto::with(['categoria', 'promociones', 'variantes'])->find($productoId);
 
-        $rol = 'propietario'; // default
+        if (!$producto) {
+            return redirect()->route('productos.index')->with('error', 'Producto no encontrado');
+        }
+
+        $rol = 'cliente';
         if ($request->user() && $request->user()->role) {
             $rol = $request->user()->role->nombre;
         }
@@ -149,7 +226,7 @@ class ProductoController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        $producto->load('imagenes');
+        $producto->load(['variantes']);
 
         return Inertia::render('Productos/Edit', [
             'producto' => $producto,
@@ -165,32 +242,11 @@ class ProductoController extends Controller
      */
     public function update(UpdateProductoRequest $request, Producto $producto)
     {
-        $data = $request->validated();
+        $data = $this->buildProductoData($request, $producto);
 
-        // Actualizar datos del producto
         $producto->update($data);
 
-        // Manejar upload de nuevas imágenes
-        if ($request->hasFile('imagen')) {
-            // Opcional: Eliminar imágenes anteriores si quieres reemplazarlas
-            // foreach ($producto->imagenes as $img) {
-            //     if (Storage::disk('public')->exists($img->url)) {
-            //         Storage::disk('public')->delete($img->url);
-            //     }
-            //     $img->delete();
-            // }
-
-            $imagenes = is_array($request->file('imagen')) 
-                ? $request->file('imagen') 
-                : [$request->file('imagen')];
-
-            foreach ($imagenes as $imagen) {
-                $path = $imagen->store('productos', 'public');
-                $producto->imagenes()->create(['url' => $path]);
-            }
-        }
-
-        return redirect()->route('productos.index')
+        return redirect()->route('productos.index', [], 303)
             ->with('success', 'Producto actualizado exitosamente.');
     }
 
@@ -201,17 +257,17 @@ class ProductoController extends Controller
      */
     public function destroy(Producto $producto)
     {
-        // Eliminar imágenes físicas y registros
-        foreach ($producto->imagenes as $imagen) {
-            if (Storage::disk('public')->exists($imagen->url)) {
-                Storage::disk('public')->delete($imagen->url);
-            }
-            $imagen->delete();
+        if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
+            Storage::disk('public')->delete($producto->imagen);
+        }
+
+        if ($producto->qr && Storage::disk('public')->exists($producto->qr)) {
+            Storage::disk('public')->delete($producto->qr);
         }
 
         $producto->delete();
 
-        return redirect()->route('productos.index')
+        return redirect()->route('productos.index', [], 303)
             ->with('success', 'Producto eliminado exitosamente.');
     }
 
@@ -220,17 +276,53 @@ class ProductoController extends Controller
      */
     public function deleteImage(Producto $producto, $imagenId)
     {
-        $imagen = $producto->imagenes()->findOrFail($imagenId);
-        
-        // Eliminar archivo físico
-        if (Storage::disk('public')->exists($imagen->url)) {
-            Storage::disk('public')->delete($imagen->url);
+        if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
+            Storage::disk('public')->delete($producto->imagen);
         }
-        
-        // Eliminar registro de BD
-        $imagen->delete();
+
+        $producto->update(['imagen' => null]);
 
         return back()->with('success', 'Imagen eliminada exitosamente.');
+    }
+
+    private function buildProductoData(Request $request, ?Producto $producto = null): array
+    {
+        $data = $request->validated();
+        $baseVenta = isset($data['precio_venta_base']) && $data['precio_venta_base'] !== null
+            ? $data['precio_venta_base']
+            : ($producto?->precio_venta_base ?? $producto?->precio_venta ?? 0);
+        $baseMayorista = isset($data['precio_venta_mayorista_base']) && $data['precio_venta_mayorista_base'] !== null
+            ? $data['precio_venta_mayorista_base']
+            : ($producto?->precio_venta_mayorista_base ?? $producto?->precio_venta_mayorista ?? $baseVenta);
+
+        if ($request->hasFile('imagen')) {
+            if ($producto && $producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
+                Storage::disk('public')->delete($producto->imagen);
+            }
+
+            $data['imagen'] = $request->file('imagen')->store('productos', 'public');
+        } elseif ($producto) {
+            $data['imagen'] = $producto->imagen;
+        } else {
+            $data['imagen'] = null;
+        }
+
+        if ($request->hasFile('qr')) {
+            if ($producto && $producto->qr && Storage::disk('public')->exists($producto->qr)) {
+                Storage::disk('public')->delete($producto->qr);
+            }
+
+            $data['qr'] = $request->file('qr')->store('productos/qr', 'public');
+        } elseif ($producto) {
+            $data['qr'] = $producto->qr;
+        } else {
+            $data['qr'] = null;
+        }
+
+        $data['precio_venta_base'] = $baseVenta;
+        $data['precio_venta_mayorista_base'] = $baseMayorista;
+
+        return $data;
     }
 }
 

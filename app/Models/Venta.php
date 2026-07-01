@@ -35,6 +35,10 @@ class Venta extends Model
         'updated_at' => 'datetime'
     ];
 
+    protected $appends = [
+        'metodo_pago',
+    ];
+
     // Relaciones
     public function user()
     {
@@ -55,6 +59,11 @@ class Venta extends Model
     public function metodoPago()
     {
         return $this->belongsTo(MetodoPago::class, 'metodo_pago_id');
+    }
+
+    public function getMetodoPagoAttribute()
+    {
+        return optional($this->getRelationValue('metodoPago'))->nombre;
     }
 
     public function detalles()

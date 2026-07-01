@@ -11,14 +11,14 @@ use App\Models\MenuItem;
  */
 class CategoriaPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
-        return $this->userHasAccessToRoute($user, 'categorias.index');
+        return true;
     }
 
-    public function view(User $user, Categoria $categoria): bool
+    public function view(?User $user, Categoria $categoria): bool
     {
-        return $this->userHasAccessToRoute($user, 'categorias.index');
+        return true;
     }
 
     public function create(User $user): bool

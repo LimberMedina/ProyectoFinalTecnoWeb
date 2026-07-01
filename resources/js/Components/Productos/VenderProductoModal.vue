@@ -18,6 +18,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    clienteFinalId: {
+        type: Number,
+        default: null,
+    },
     metodosPago: {
         type: Array,
         default: () => [],
@@ -173,10 +177,17 @@ const subtotal = computed(() =>
 );
 
 const clienteIdParaVenta = computed(() => {
-    if (clienteTipo.value !== "cliente_existente") return null;
-    return clienteIdSeleccionado.value
-        ? Number(clienteIdSeleccionado.value)
-        : null;
+    if (clienteTipo.value === "cliente_existente") {
+        return clienteIdSeleccionado.value
+            ? Number(clienteIdSeleccionado.value)
+            : null;
+    }
+
+    if (clienteTipo.value === "consumidor_final") {
+        return props.clienteFinalId ?? null;
+    }
+
+    return null;
 });
 
 const updateCantidad = (item, value) => {

@@ -37,6 +37,63 @@
                         class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
                     >
                         <h2 class="mb-5 text-lg font-black text-slate-900">
+                            Información del cliente
+                        </h2>
+                        <div class="space-y-3 text-sm text-slate-700">
+                            <p>
+                                <span class="font-semibold text-slate-900"
+                                    >Nombre:</span
+                                >
+                                {{
+                                    pago.cuota?.credito?.venta?.user?.nombre ||
+                                    pago.venta?.user?.nombre ||
+                                    "—"
+                                }}
+                                {{
+                                    pago.cuota?.credito?.venta?.user
+                                        ?.apellidos ||
+                                    pago.venta?.user?.apellidos ||
+                                    ""
+                                }}
+                            </p>
+                            <p>
+                                <span class="font-semibold text-slate-900"
+                                    >CI:</span
+                                >
+                                {{
+                                    pago.cuota?.credito?.venta?.user?.ci ||
+                                    pago.venta?.user?.ci ||
+                                    "—"
+                                }}
+                            </p>
+                            <p>
+                                <span class="font-semibold text-slate-900"
+                                    >Teléfono:</span
+                                >
+                                {{
+                                    pago.cuota?.credito?.venta?.user
+                                        ?.telefono ||
+                                    pago.venta?.user?.telefono ||
+                                    "—"
+                                }}
+                            </p>
+                            <p>
+                                <span class="font-semibold text-slate-900"
+                                    >Email:</span
+                                >
+                                {{
+                                    pago.cuota?.credito?.venta?.user?.email ||
+                                    pago.venta?.user?.email ||
+                                    "—"
+                                }}
+                            </p>
+                        </div>
+                    </section>
+
+                    <section
+                        class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
+                    >
+                        <h2 class="mb-5 text-lg font-black text-slate-900">
                             Información del pago
                         </h2>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -135,68 +192,7 @@
                     </section>
 
                     <section
-                        class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
-                    >
-                        <h2 class="mb-5 text-lg font-black text-slate-900">
-                            Información del cliente
-                        </h2>
-                        <div class="space-y-4 text-sm text-slate-700">
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
-                                >
-                                    Nombre completo
-                                </p>
-                                <p class="mt-1 font-semibold text-slate-900">
-                                    {{
-                                        pago.cuota?.credito?.venta?.user
-                                            ?.name || "N/A"
-                                    }}
-                                </p>
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
-                                >
-                                    CI
-                                </p>
-                                <p class="mt-1 font-semibold text-slate-900">
-                                    {{
-                                        pago.cuota?.credito?.venta?.user?.ci ||
-                                        "N/A"
-                                    }}
-                                </p>
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
-                                >
-                                    Teléfono
-                                </p>
-                                <p class="mt-1 font-semibold text-slate-900">
-                                    {{
-                                        pago.cuota?.credito?.venta?.user
-                                            ?.telefono || "N/A"
-                                    }}
-                                </p>
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
-                                >
-                                    Email
-                                </p>
-                                <p class="mt-1 font-semibold text-slate-900">
-                                    {{
-                                        pago.cuota?.credito?.venta?.user
-                                            ?.email || "N/A"
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section
+                        v-if="pago.cuota"
                         class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)] lg:col-span-2"
                     >
                         <h2 class="mb-5 text-lg font-black text-slate-900">
@@ -211,16 +207,19 @@
                                 >
                                     Crédito N°
                                 </p>
-                                <Link
-                                    :href="
-                                        route(
-                                            'creditos.show',
-                                            pago.cuota?.credito?.id,
-                                        )
-                                    "
-                                    class="mt-2 inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700"
-                                    >#{{ pago.cuota?.credito?.id }}</Link
-                                >
+                                <template v-if="pago.cuota?.credito?.id">
+                                    <Link
+                                        :href="
+                                            route(
+                                                'creditos.show',
+                                                pago.cuota?.credito?.id,
+                                            )
+                                        "
+                                        class="mt-2 inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700"
+                                        >#{{ pago.cuota?.credito?.id }}</Link
+                                    >
+                                </template>
+                                <template v-else>—</template>
                             </div>
                             <div
                                 class="rounded-2xl border border-slate-100 bg-slate-50 p-4"
@@ -233,8 +232,13 @@
                                 <p
                                     class="mt-2 text-sm font-semibold text-slate-900"
                                 >
-                                    {{ pago.cuota?.numero_cuota }} /
-                                    {{ pago.cuota?.credito?.cuotas_total }}
+                                    {{
+                                        pago.cuota
+                                            ? pago.cuota.numero_cuota +
+                                              " / " +
+                                              pago.cuota.credito?.cuotas_total
+                                            : "—"
+                                    }}
                                 </p>
                             </div>
                             <div
@@ -248,7 +252,8 @@
                                 <p
                                     class="mt-2 text-sm font-semibold text-slate-900"
                                 >
-                                    Bs. {{ formatMoney(pago.cuota?.monto) }}
+                                    Bs.
+                                    {{ formatMoney(pago.cuota?.monto || 0) }}
                                 </p>
                             </div>
                             <div
@@ -271,7 +276,8 @@
                                                   : 'bg-rose-100 text-rose-700'
                                         "
                                         >{{
-                                            pago.cuota?.estado?.toUpperCase()
+                                            pago.cuota?.estado?.toUpperCase() ||
+                                            "N/A"
                                         }}</span
                                     >
                                 </p>
@@ -290,7 +296,8 @@
                                     Bs.
                                     {{
                                         formatMoney(
-                                            pago.cuota?.credito?.monto_credito,
+                                            pago.cuota?.credito
+                                                ?.monto_credito || 0,
                                         )
                                     }}
                                 </p>
@@ -309,7 +316,8 @@
                                     Bs.
                                     {{
                                         formatMoney(
-                                            pago.cuota?.credito?.monto_pagado,
+                                            pago.cuota?.credito?.monto_pagado ||
+                                                0,
                                         )
                                     }}
                                 </p>
@@ -329,7 +337,7 @@
                                     {{
                                         formatMoney(
                                             pago.cuota?.credito
-                                                ?.monto_pendiente,
+                                                ?.monto_pendiente || 0,
                                         )
                                     }}
                                 </p>
@@ -348,9 +356,51 @@
                                     Bs.
                                     {{
                                         formatMoney(
-                                            pago.cuota?.credito?.venta?.total,
+                                            pago.cuota?.credito?.venta?.total ||
+                                                pago.venta?.total ||
+                                                0,
                                         )
                                     }}
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        v-else-if="pago.venta"
+                        class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)] lg:col-span-2"
+                    >
+                        <h2 class="mb-5 text-lg font-black text-slate-900">
+                            Información de la venta
+                        </h2>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div
+                                class="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+                            >
+                                <p
+                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+                                >
+                                    Venta N°
+                                </p>
+                                <p
+                                    class="mt-2 text-sm font-semibold text-slate-900"
+                                >
+                                    Venta #{{ pago.venta?.id }}
+                                </p>
+                            </div>
+                            <div
+                                class="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+                            >
+                                <p
+                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+                                >
+                                    Total venta
+                                </p>
+                                <p
+                                    class="mt-2 text-sm font-semibold text-slate-900"
+                                >
+                                    Bs.
+                                    {{ formatMoney(pago.venta?.total || 0) }}
                                 </p>
                             </div>
                         </div>
@@ -386,7 +436,9 @@
                                     <tbody>
                                         <tr
                                             v-for="detalle in pago.cuota
-                                                ?.credito?.venta?.detalles"
+                                                ?.credito?.venta?.detalles ||
+                                            pago.venta?.detalles ||
+                                            []"
                                             :key="detalle.id"
                                             class="border-t border-slate-100"
                                         >

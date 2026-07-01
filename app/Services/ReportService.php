@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Venta;
 use App\Models\Credito;
 use App\Models\Cuota;
+use App\Models\Pago;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
 use App\Models\PageVisit;
@@ -18,7 +19,10 @@ class ReportService
     public function ventasDia()
     {
         return Venta::whereDate('created_at', today())
-            ->where('estado', 'completada')
+            ->where(function($q) {
+                $q->where('estado', 'completada')
+                  ->orWhere('tipo_pago', 'credito');
+            })
             ->count();
     }
 
@@ -28,7 +32,10 @@ class ReportService
     public function ventasSemana()
     {
         return Venta::whereBetween('created_at', [now()->subWeek(), now()])
-            ->where('estado', 'completada')
+            ->where(function($q) {
+                $q->where('estado', 'completada')
+                  ->orWhere('tipo_pago', 'credito');
+            })
             ->count();
     }
 
@@ -39,7 +46,10 @@ class ReportService
     {
         return Venta::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
-            ->where('estado', 'completada')
+            ->where(function($q) {
+                $q->where('estado', 'completada')
+                  ->orWhere('tipo_pago', 'credito');
+            })
             ->count();
     }
 
@@ -48,23 +58,31 @@ class ReportService
      */
     public function ingresosTotales($periodo = 'mes')
     {
-        $query = Venta::where('estado', 'completada');
+        $ventaQuery = Venta::where('estado', 'completada');
+        $pagoQuery = \App\Models\Pago::query();
 
         switch ($periodo) {
             case 'dia':
-                $query->whereDate('created_at', today());
+                $ventaQuery->whereDate('created_at', today());
+                $pagoQuery->whereDate('fecha', today());
                 break;
             case 'semana':
-                $query->whereBetween('created_at', [now()->subWeek(), now()]);
+                $ventaQuery->whereBetween('created_at', [now()->subWeek(), now()]);
+                $pagoQuery->whereBetween('fecha', [now()->subWeek(), now()]);
                 break;
             case 'mes':
             default:
-                $query->whereMonth('created_at', now()->month)
+                $ventaQuery->whereMonth('created_at', now()->month)
                       ->whereYear('created_at', now()->year);
+                $pagoQuery->whereMonth('fecha', now()->month)->whereYear('fecha', now()->year);
                 break;
         }
 
-        return $query->sum('total');
+        $ventasSum = (float) $ventaQuery->sum('total');
+        $pagosSum = (float) $pagoQuery->sum('monto');
+
+        // Ingresos totales = ventas completadas (contado) + pagos (cuotas y otros)
+        return $ventasSum + $pagosSum;
     }
 
     
@@ -94,7 +112,7 @@ class ReportService
      */
     public function creditosPendientes()
     {
-        return Credito::where('estado', 'activo')->count();
+        return Credito::whereIn('estado', ['pendiente', 'vencido'])->count();
     }
 
     /**
@@ -114,10 +132,14 @@ class ReportService
     }
 
     /**
-     * Monto total de créditos activos
+     * Monto total de créditos pendientes o por estado
      */
-    public function montoCreditos($estado = 'activo')
+    public function montoCreditos($estado = null)
     {
+        if (is_null($estado)) {
+            return Credito::whereIn('estado', ['pendiente', 'vencido'])->sum('monto_pendiente');
+        }
+
         return Credito::where('estado', $estado)->sum('monto_pendiente');
     }
 
@@ -169,11 +191,11 @@ class ReportService
 
         $creditosActivos = Credito::whereHas('venta', function($q) use ($userId) {
             $q->where('user_id', $userId);
-        })->where('estado', 'activo')->count();
+        })->whereIn('estado', ['pendiente', 'vencido'])->count();
 
         $deudaPendiente = Credito::whereHas('venta', function($q) use ($userId) {
             $q->where('user_id', $userId);
-        })->where('estado', 'activo')->sum('monto_pendiente');
+        })->whereIn('estado', ['pendiente', 'vencido'])->sum('monto_pendiente');
 
         $cuotasPendientes = Cuota::whereHas('credito.venta', function($q) use ($userId) {
             $q->where('user_id', $userId);
@@ -311,14 +333,25 @@ class ReportService
 
     public function pagosContadoCredito($fechaInicio, $fechaFin)
     {
-        return Venta::select(
-                'tipo_pago',
-                DB::raw('SUM(total) as monto_total')
-            )
-            ->where('estado', 'completada')
+        $contado = (float) Venta::where('estado', 'completada')
+            ->where('tipo_pago', 'contado')
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-            ->groupBy('tipo_pago')
-            ->get();
+            ->sum('total');
+
+        $credito = (float) Pago::whereNotNull('cuota_id')
+            ->where(function ($query) {
+                $query->where('pago_facil_status', 'completed')
+                    ->orWhereNull('pago_facil_status');
+            })
+            ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+            ->sum('monto');
+
+        $rows = collect([
+            ['tipo_pago' => 'Contado', 'monto_total' => $contado],
+            ['tipo_pago' => 'Crédito', 'monto_total' => $credito],
+        ]);
+
+        return $rows->filter(fn ($row) => (float) $row['monto_total'] > 0.01);
     }
 
     public function estadoPedidos($fechaInicio, $fechaFin)

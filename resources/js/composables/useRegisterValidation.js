@@ -10,6 +10,7 @@ export function useRegisterValidation() {
         fecha_nacimiento: "",
         password: "",
         password_confirmation: "",
+        role_id: "",
     });
 
     // Estados para validación de email
@@ -82,6 +83,10 @@ export function useRegisterValidation() {
         if (!/^[a-záéíóúñ\s]+$/i.test(value)) {
             return "El nombre solo puede contener letras y espacios.";
         }
+        const words = value.trim().split(/\s+/);
+        if (words.length > 3) {
+            return "El nombre no puede tener más de 3 palabras.";
+        }
         if (value.length < 2) {
             return "El nombre debe tener al menos 2 caracteres.";
         }
@@ -95,6 +100,10 @@ export function useRegisterValidation() {
         if (!value) return "";
         if (!/^[a-záéíóúñ\s]+$/i.test(value)) {
             return "Los apellidos solo pueden contener letras y espacios.";
+        }
+        const words = value.trim().split(/\s+/);
+        if (words.length > 3) {
+            return "Los apellidos no pueden tener más de 3 palabras.";
         }
         if (value.length < 2) {
             return "Los apellidos deben tener al menos 2 caracteres.";
@@ -188,6 +197,11 @@ export function useRegisterValidation() {
         return "";
     };
 
+    const validateRoleId = (value) => {
+        if (!value) return "Debe seleccionar un rol.";
+        return "";
+    };
+
     // Actualizar error
     const updateError = (field, value, otherValue = null) => {
         switch (field) {
@@ -229,6 +243,9 @@ export function useRegisterValidation() {
                 errors.value.password_confirmation =
                     validatePasswordConfirmation(otherValue, value);
                 break;
+            case "role_id":
+                errors.value.role_id = validateRoleId(value);
+                break;
         }
     };
 
@@ -242,6 +259,7 @@ export function useRegisterValidation() {
         errors.value.fecha_nacimiento = validateFechaNacimiento(
             formData.fecha_nacimiento,
         );
+        errors.value.role_id = validateRoleId(formData.role_id);
         errors.value.password = validatePassword(formData.password);
         errors.value.password_confirmation = validatePasswordConfirmation(
             formData.password,

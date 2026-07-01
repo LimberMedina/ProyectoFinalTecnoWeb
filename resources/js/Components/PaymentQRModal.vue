@@ -323,6 +323,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
+import { showToast } from "@/utils/toast";
 import axios from "axios";
 
 const props = defineProps({
@@ -459,12 +460,28 @@ const verificarEstadoPago = async () => {
 
         const data = response.data;
 
-        if (
-            data.status === "completed" ||
-            data.pago_facil_status === "completed"
-        ) {
+        const status = String(
+            data.status || data.pago_facil_status || data.estado || "",
+        ).toLowerCase();
+
+        const pagoConfirmado = [
+            "completed",
+            "pagado",
+            "paid",
+            "approved",
+            "completado",
+        ].includes(status);
+
+        if (pagoConfirmado) {
             estadoVerificacion.value = "pagado";
             clearInterval(intervaloVerificacion);
+
+            // Mostrar toast de éxito
+            try {
+                showToast("Pago de cuota confirmado con éxito.", "success");
+            } catch (e) {
+                console.warn("showToast falló:", e);
+            }
 
             // Esperar 2 segundos antes de cerrar y recargar (recarga completa de Inertia)
             setTimeout(() => {

@@ -205,8 +205,10 @@
                                                 class="font-semibold text-slate-900"
                                             >
                                                 {{
+                                                    pago.venta?.user?.name ||
                                                     pago.cuota?.credito?.venta
-                                                        ?.user?.name || "N/A"
+                                                        ?.user?.name ||
+                                                    "N/A"
                                                 }}
                                             </p>
                                             <p
@@ -214,24 +216,48 @@
                                             >
                                                 CI:
                                                 {{
+                                                    pago.venta?.user?.ci ||
                                                     pago.cuota?.credito?.venta
-                                                        ?.user?.ci || "N/A"
+                                                        ?.user?.ci ||
+                                                    "N/A"
                                                 }}
                                             </p>
                                         </td>
                                         <td class="px-4 py-4">
-                                            <Link
-                                                :href="
-                                                    route(
-                                                        'creditos.show',
-                                                        pago.cuota?.credito?.id,
-                                                    )
-                                                "
-                                                class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700"
-                                                >#{{
-                                                    pago.cuota?.credito?.id
-                                                }}</Link
+                                            <template
+                                                v-if="pago.cuota?.credito?.id"
                                             >
+                                                <Link
+                                                    :href="
+                                                        route(
+                                                            'creditos.show',
+                                                            pago.cuota?.credito
+                                                                ?.id,
+                                                        )
+                                                    "
+                                                    class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700"
+                                                    >#{{
+                                                        pago.cuota?.credito?.id
+                                                    }}</Link
+                                                >
+                                            </template>
+                                            <template
+                                                v-else-if="pago.venta?.id"
+                                            >
+                                                <Link
+                                                    :href="
+                                                        route(
+                                                            'ventas.show',
+                                                            pago.venta?.id,
+                                                        )
+                                                    "
+                                                    class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"
+                                                    >Venta #{{
+                                                        pago.venta?.id
+                                                    }}</Link
+                                                >
+                                            </template>
+                                            <template v-else> — </template>
                                         </td>
                                         <td class="px-4 py-4">
                                             <span

@@ -11,6 +11,7 @@ const props = defineProps({
     productos: Object,
     categorias: Array,
     clientes: Array,
+    clienteFinalId: Number,
     metodosPago: Array,
     filters: Object,
     rol: String,
@@ -771,6 +772,7 @@ const onVentaRegistrada = (payload) => {
                 :producto="productoSeleccionado"
                 :items-iniciales="variantesEnEspera"
                 :clientes="clientes"
+                :cliente-final-id="clienteFinalId"
                 :metodos-pago="metodosPago"
                 @close="cerrarModales"
                 @venta-registrada="onVentaRegistrada"

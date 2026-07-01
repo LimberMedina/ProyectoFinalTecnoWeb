@@ -763,6 +763,26 @@ class PedidoOnlineController extends Controller
             ]);
         }
 
+        
+
+        // Registrar pago para la venta online finalizada (pago con QR)
+            try {
+                Pago::create([
+                    'venta_id' => $ventaActual->id,
+                    'cuota_id' => null,
+                    'monto' => $ventaActual->total,
+                    'metodo_pago_id' => $ventaActual->metodo_pago_id,
+                    'fecha' => now(),
+                    'pago_facil_transaction_id' => $ventaActual->pago_facil_transaction_id,
+                    'pago_facil_payment_number' => $ventaActual->pago_facil_payment_number,
+                    'pago_facil_qr_image' => $ventaActual->pago_facil_qr_image,
+                    'pago_facil_status' => $ventaActual->pago_facil_status ?? 'completed',
+                    'pago_facil_raw_response' => json_encode($rawResponse),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error registrando Pago para venta finalizada: ' . $e->getMessage(), ['venta_id' => $ventaActual->id]);
+            }
+
         return true;
     }
 

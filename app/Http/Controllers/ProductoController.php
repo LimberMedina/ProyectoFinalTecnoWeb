@@ -113,10 +113,19 @@ class ProductoController extends Controller
                 })
                 ->values();
 
+            $clienteFinal = User::whereRaw('LOWER(nombre) = ?', ['consumidor final'])
+                ->where('apellidos', '')
+                ->whereHas('role', function ($query) {
+                    $query->whereRaw('LOWER(nombre) = ?', ['cliente']);
+                })
+                ->where('estado', true)
+                ->first(['id']);
+
             return Inertia::render('Productos/IndexVendedor', [
                 'productos' => $productos,
                 'categorias' => $categorias,
                 'clientes' => $clientes,
+                'clienteFinalId' => $clienteFinal?->id,
                 'metodosPago' => $metodosPago,
                 'filters' => [
                     'search' => $search,

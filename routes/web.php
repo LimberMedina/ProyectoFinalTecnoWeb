@@ -63,6 +63,9 @@ Route::get('/test-simple', function() {
     return response()->json(['message' => 'Test simple funciona']);
 });
 
+// API de búsqueda global pública para invitados y usuarios autenticados
+Route::get('/api/search/all', [SearchController::class, 'search'])->name('api.search');
+
 // ============================================
 // RUTAS AUTENTICADAS
 // ============================================
@@ -74,9 +77,6 @@ Route::middleware([
     
     // API para obtener menú dinámico
     Route::get('/api/menu', [MenuController::class, 'getMenuItems'])->name('api.menu');
-    
-    // API de búsqueda global
-    Route::get('/api/search/all', [SearchController::class, 'search'])->name('api.search');
     
     // Dashboard - Todos los roles autenticados
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

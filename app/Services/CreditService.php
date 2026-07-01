@@ -155,6 +155,7 @@ class CreditService
                 'monto_pendiente' => $plan['monto'],
                 'fecha_vencimiento' => $plan['fecha_vencimiento'],
                 'estado' => 'pendiente',
+                'dias_mora' => 0,
                 'mora' => 0,
             ]);
 
@@ -204,7 +205,7 @@ class CreditService
     public function getOverdueCredits(int $daysThreshold = 0): Collection
     {
         return Credito::with(['venta', 'cuotas'])
-            ->where('estado', 'activo')
+            ->whereIn('estado', ['pendiente', 'vencido'])
             ->whereHas('cuotas', function($q) use ($daysThreshold) {
                 $q->where('estado', 'vencida')
                   ->orWhere(function($subQ) use ($daysThreshold) {

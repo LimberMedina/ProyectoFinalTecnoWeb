@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { useForm } from "@inertiajs/vue3";
+import { showToast } from "@/utils/toast";
 
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
@@ -15,7 +16,10 @@ const updatePassword = () => {
     form.put(route("user-password.update"), {
         errorBag: "updatePassword",
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            form.reset();
+            showToast("Contraseña actualizada correctamente.", "success");
+        },
         onError: () => {
             if (form.errors.password) {
                 form.reset("password", "password_confirmation");
@@ -26,6 +30,15 @@ const updatePassword = () => {
                 form.reset("current_password");
                 currentPasswordInput.value.focus();
             }
+
+            const firstError = Object.values(form.errors)[0];
+            showToast(
+                Array.isArray(firstError)
+                    ? firstError[0]
+                    : firstError ||
+                          "Error al actualizar la contraseña. Verifica los campos e intenta nuevamente.",
+                "error",
+            );
         },
     });
 };

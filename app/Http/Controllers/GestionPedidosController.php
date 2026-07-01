@@ -36,8 +36,8 @@ class GestionPedidosController extends Controller
      */
     public function index(Request $request)
     {
-        $origen = $request->input('origen', 'tienda'); // tienda u online
-        $estado = $request->input('estado', 'pendiente');
+        $origen = $request->input('origen', 'online'); // tienda u online
+        $estado = $request->input('estado', null);
 
         $query = Venta::with(['user', 'vendedor', 'metodoPago', 'detalles.producto', 'credito.cuotas'])
             ->orderBy('created_at', 'desc');
@@ -48,7 +48,7 @@ class GestionPedidosController extends Controller
         }
 
         // Filtrar por estado si se especifica
-        if (in_array($estado, ['pendiente', 'pagado', 'enviado', 'entregado', 'anulado'])) {
+        if ($estado && in_array($estado, ['pendiente', 'pagado', 'enviado', 'entregado', 'anulado'])) {
             $query->where('estado', $estado);
         }
 
@@ -67,7 +67,7 @@ class GestionPedidosController extends Controller
         return Inertia::render('Pedidos/Index', [
             'pedidos' => $pedidos,
             'filtro_origen' => $origen,
-            'filtro_estado' => $estado,
+            'filtro_estado' => $estado ?? 'todos',
             'rol' => $rol,
         ]);
     }

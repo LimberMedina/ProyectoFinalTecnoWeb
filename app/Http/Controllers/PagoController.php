@@ -26,6 +26,7 @@ class PagoController extends Controller
     {
         $query = \App\Models\Pago::with([
             'cuota.credito.venta.user',
+            'venta.user',
             'metodoPago'
         ])
         ->orderBy('fecha', 'desc');
@@ -41,10 +42,16 @@ class PagoController extends Controller
 
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
-            $query->whereHas('cuota.credito.venta.user', function($q) use ($buscar) {
-                $q->where('nombre', 'like', "%{$buscar}%")
-                  ->orWhere('apellidos', 'like', "%{$buscar}%")
-                  ->orWhere('ci', 'like', "%{$buscar}%");
+            $query->where(function($q) use ($buscar) {
+                $q->whereHas('cuota.credito.venta.user', function($q2) use ($buscar) {
+                    $q2->where('nombre', 'like', "%{$buscar}%")
+                       ->orWhere('apellidos', 'like', "%{$buscar}%")
+                       ->orWhere('ci', 'like', "%{$buscar}%");
+                })->orWhereHas('venta.user', function($q3) use ($buscar) {
+                    $q3->where('nombre', 'like', "%{$buscar}%")
+                       ->orWhere('apellidos', 'like', "%{$buscar}%")
+                       ->orWhere('ci', 'like', "%{$buscar}%");
+                });
             });
         }
 
@@ -76,6 +83,8 @@ class PagoController extends Controller
         $pago = \App\Models\Pago::with([
             'cuota.credito.venta.user',
             'cuota.credito.venta.detalles.producto',
+            'venta.user',
+            'venta.detalles.producto',
             'metodoPago'
         ])->findOrFail($id);
 

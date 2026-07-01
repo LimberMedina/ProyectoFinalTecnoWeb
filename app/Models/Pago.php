@@ -12,6 +12,7 @@ class Pago extends Model
     protected $table = 'pagos';
 
     protected $fillable = [
+        'venta_id',
         'cuota_id',
         'cuota_credito_id',
         'metodo_pago_id',
@@ -37,6 +38,11 @@ class Pago extends Model
     public function cuota()
     {
         return $this->belongsTo(Cuota::class);
+    }
+
+    public function venta()
+    {
+        return $this->belongsTo(\App\Models\Venta::class, 'venta_id');
     }
 
     public function cuotaCredito()

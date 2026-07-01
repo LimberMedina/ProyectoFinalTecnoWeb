@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import FlashNotification from "@/Components/FlashNotification.vue";
 import { Link, router } from "@inertiajs/vue3";
 import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 import CreditoModal from "@/Components/CreditoModal.vue";
@@ -12,8 +13,8 @@ const props = defineProps({
 });
 
 // Filtros por defecto si vienen vacíos
-const filtroOrigen = computed(() => props.filtro_origen || "tienda");
-const filtroEstado = computed(() => props.filtro_estado || "pendiente");
+const filtroOrigen = computed(() => props.filtro_origen || "online");
+const filtroEstado = computed(() => props.filtro_estado || "pagado");
 
 const formatMoney = (amount) => parseFloat(amount || 0).toFixed(2);
 
@@ -183,6 +184,7 @@ const visiblePages = computed(() => {
 
 <template>
     <AppLayout title="Gestión de Pedidos">
+        <FlashNotification />
         <div
             class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)]"
         >
@@ -210,14 +212,6 @@ const visiblePages = computed(() => {
                             Administra los pedidos realizados por clientes.
                         </p>
                     </div>
-
-                    <Link
-                        :href="route('pedidos.create')"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700"
-                    >
-                        <i class="bi bi-plus-circle"></i>
-                        Nuevo pedido
-                    </Link>
                 </div>
 
                 <section
@@ -227,30 +221,12 @@ const visiblePages = computed(() => {
                         class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
                     >
                         <div class="flex flex-wrap gap-2">
-                            <button
-                                class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition"
-                                :class="
-                                    filtroOrigen === 'tienda'
-                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                "
-                                @click="cambiarFiltroOrigen('tienda')"
-                            >
-                                <i class="bi bi-shop"></i>
-                                Tienda
-                            </button>
-                            <button
-                                class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition"
-                                :class="
-                                    filtroOrigen === 'online'
-                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                "
-                                @click="cambiarFiltroOrigen('online')"
+                            <span
+                                class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700"
                             >
                                 <i class="bi bi-globe2"></i>
-                                Online
-                            </button>
+                                Pedidos online
+                            </span>
                         </div>
 
                         <div class="flex flex-wrap gap-2">

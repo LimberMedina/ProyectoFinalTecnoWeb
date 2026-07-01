@@ -6,9 +6,14 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Models\Pago;
 use App\Models\MetodoPago;
-use App\Models\Carrito;
+// Carrito not used in this controller (ventas de tienda manejan su propio flujo)
 use App\Models\KardexInventario;
+use App\Models\MovimientoInventario;
+use App\Models\TecnicaInventario;
+use App\Models\TecnicaCosto;
+use App\Models\User;
 use App\Services\CreditService;
 use App\Services\FifoInventoryService;
 use App\Services\PagoFacilService;
@@ -54,12 +59,23 @@ class VentaController extends Controller
         $ventas = $query->paginate(10)->withQueryString();
 
         // Añadir cuotas_pendientes a cada venta si es de tipo crédito
+        // y asegurar que las ventas sin usuario muestren "Consumidor Final"
         $ventas->getCollection()->transform(function ($venta) {
             if ($venta->tipo_pago === 'credito' && $venta->credito) {
                 $venta->cuotas_pendientes = $venta->credito->cuotas_pendientes;
             } else {
                 $venta->cuotas_pendientes = 0;
             }
+
+            // Si la venta no tiene usuario asociado, exponer nombre 'Consumidor Final'
+            if (! $venta->user) {
+                $venta->cliente_nombre = 'Consumidor Final';
+                // Proveer un objeto user mínimo para compatibilidad en vistas
+                $venta->setRelation('user', (object) ['nombre' => 'Consumidor Final', 'apellidos' => '']);
+            } else {
+                $venta->cliente_nombre = trim(($venta->user->nombre ?? '') . ' ' . ($venta->user->apellidos ?? '')) ?: ($venta->user->email ?? 'Cliente');
+            }
+
             return $venta;
         });
 
@@ -165,15 +181,22 @@ class VentaController extends Controller
             }
 
             // Crear venta
+            $clienteId = $request->cliente_id;
+            if ($clienteId === null && auth()->user() && auth()->user()->esVendedor()) {
+                $clienteId = $this->getConsumidorFinalUserId() ?? auth()->id();
+            }
+            $clienteId = $clienteId ?? auth()->id();
+
             $numeroVenta = $this->generarNumeroVenta();
             
             $venta = Venta::create([
                 'numero_venta' => $numeroVenta,
-                'user_id' => $request->cliente_id ?? auth()->id(),
+                'user_id' => $clienteId,
                 'vendedor_id' => auth()->user()->esVendedor() ? auth()->id() : null,
                 'metodo_pago_id' => $metodoPago->id,
                 'tipo_pago' => 'contado',
                 'total' => $total,
+                'origen' => 'tienda',
                 'estado' => $esMetodoQr ? 'pendiente' : 'completada',
                 'observaciones' => "Venta al contado - {$metodoPago->nombre}"
             ]);
@@ -204,6 +227,7 @@ class VentaController extends Controller
 
                 if (! $esMetodoQr) {
                     // Reducir stock y registrar kardex sólo para ventas de contado sin QR
+                    $stockAntes = $item['variante']->stock_actual;
                     $item['variante']->decrement('stock_actual', $item['cantidad']);
 
                     KardexInventario::create([
@@ -213,15 +237,43 @@ class VentaController extends Controller
                         'referencia' => "Venta {$numeroVenta}",
                         'observaciones' => "Venta al contado - {$metodoPago->nombre}"
                     ]);
-                }
-            }
 
-            // Limpiar carrito si es cliente autenticado
-            if (auth()->check()) {
-                $carrito = Carrito::where('user_id', auth()->id())->first();
-                if ($carrito) {
-                    $carrito->detalles()->delete();
-                }
+                    // Registrar movimiento de inventario para el panel
+                    $tecnicaInventarioId = $item['variante']->id_tecnica_inventario
+                        ?? TecnicaInventario::query()->orderBy('id')->value('id');
+                    if (! $tecnicaInventarioId) {
+                        $tecnicaInventarioId = TecnicaInventario::query()->firstOrCreate(
+                            ['nombre' => 'Automática'],
+                            ['descripcion' => 'Técnica creada automáticamente para registrar movimientos']
+                        )->id;
+                    }
+
+                    $tecnicaCostoId = $item['variante']->id_tecnica_costo
+                        ?? TecnicaCosto::query()->orderBy('id')->value('id');
+                    if (! $tecnicaCostoId) {
+                        $tecnicaCostoId = TecnicaCosto::query()->firstOrCreate(
+                            ['nombre' => 'Costo automático'],
+                            ['descripcion' => 'Técnica creada automáticamente para registrar costos de movimientos']
+                        )->id;
+                    }
+
+                    MovimientoInventario::create([
+                        'id_producto' => $item['producto']->id,
+                        'id_producto_variante' => $item['variante']->id,
+                        'id_tecnica_inventario' => $tecnicaInventarioId,
+                        'id_tecnica_costo' => $tecnicaCostoId,
+                        'tipo_movimiento' => 'salida',
+                        'motivo' => "Venta {$numeroVenta}",
+                        'cantidad' => $item['cantidad'],
+                        'costo_unitario' => $fifo['costo_unitario'] ?? 0,
+                        'costo_total' => round(($fifo['costo_unitario'] ?? 0) * $item['cantidad'], 2),
+                        'stock_anterior' => $stockAntes,
+                        'stock_resultante' => max(0, $stockAntes - $item['cantidad']),
+                        'fecha' => now()->toDateString(),
+                        'observacion' => "Venta al contado - {$metodoPago->nombre} - vendedor:" . (auth()->id() ?? 'sistema'),
+                    ]);
+
+                    }
             }
 
             if ($esMetodoQr) {
@@ -254,6 +306,22 @@ class VentaController extends Controller
             }
 
             DB::commit();
+
+            // Registrar pago para ventas de contado que no usan QR (efectivo/tarjeta)
+            try {
+                Pago::create([
+                    'venta_id' => $venta->id,
+                    'cuota_id' => null,
+                    'monto' => $total,
+                    'metodo_pago_id' => $metodoPago->id,
+                    'fecha' => now(),
+                    'pago_facil_transaction_id' => $venta->pago_facil_transaction_id ?? null,
+                    'pago_facil_payment_number' => $venta->pago_facil_payment_number ?? null,
+                    'pago_facil_status' => null,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('No se pudo crear registro de Pago para venta contado: ' . $e->getMessage(), ['venta_id' => $venta->id]);
+            }
 
             return response()->json([
                 'message' => 'Venta realizada exitosamente',
@@ -336,6 +404,7 @@ class VentaController extends Controller
                 'vendedor_id' => auth()->id(),
                 'metodo_pago_id' => $metodoPago->id,
                 'tipo_pago' => 'credito',
+                'origen' => 'tienda',
                 'total' => $total,
                 'estado' => 'pendiente',
                 'observaciones' => "Venta a crédito - {$metodoPago->nombre}"
@@ -365,6 +434,7 @@ class VentaController extends Controller
                     'utilidad_bruta' => round($item['subtotal'] - $fifo['costo_total'], 2),
                 ]);
 
+                $stockAntes = $item['variante']->stock_actual;
                 $item['variante']->decrement('stock_actual', $item['cantidad']);
 
                 // Registrar en kardex
@@ -374,6 +444,41 @@ class VentaController extends Controller
                     'cantidad' => $item['cantidad'],
                     'referencia' => "Venta {$numeroVenta}",
                     'observaciones' => "Venta a crédito - {$request->cuotas} cuotas"
+                ]);
+
+                // Registrar movimiento de inventario para el panel
+                $tecnicaInventarioId = $item['variante']->id_tecnica_inventario
+                    ?? TecnicaInventario::query()->orderBy('id')->value('id');
+                if (! $tecnicaInventarioId) {
+                    $tecnicaInventarioId = TecnicaInventario::query()->firstOrCreate(
+                        ['nombre' => 'Automática'],
+                        ['descripcion' => 'Técnica creada automáticamente para registrar movimientos']
+                    )->id;
+                }
+
+                $tecnicaCostoId = $item['variante']->id_tecnica_costo
+                    ?? TecnicaCosto::query()->orderBy('id')->value('id');
+                if (! $tecnicaCostoId) {
+                    $tecnicaCostoId = TecnicaCosto::query()->firstOrCreate(
+                        ['nombre' => 'Costo automático'],
+                        ['descripcion' => 'Técnica creada automáticamente para registrar costos de movimientos']
+                    )->id;
+                }
+
+                MovimientoInventario::create([
+                    'id_producto' => $item['producto']->id,
+                    'id_producto_variante' => $item['variante']->id,
+                    'id_tecnica_inventario' => $tecnicaInventarioId,
+                    'id_tecnica_costo' => $tecnicaCostoId,
+                    'tipo_movimiento' => 'salida',
+                    'motivo' => "Venta {$numeroVenta}",
+                    'cantidad' => $item['cantidad'],
+                    'costo_unitario' => $fifo['costo_unitario'] ?? 0,
+                    'costo_total' => round(($fifo['costo_unitario'] ?? 0) * $item['cantidad'], 2),
+                    'stock_anterior' => $stockAntes,
+                    'stock_resultante' => max(0, $stockAntes - $item['cantidad']),
+                    'fecha' => now()->toDateString(),
+                    'observacion' => "Venta a crédito - {$request->cuotas} cuotas - vendedor:" . (auth()->id() ?? 'sistema'),
                 ]);
             }
 
@@ -413,6 +518,19 @@ class VentaController extends Controller
         $secuencia = $ultimaVenta ? intval(substr($ultimaVenta->numero_venta, -4)) + 1 : 1;
         
         return sprintf('VE-%s-%04d', $fecha, $secuencia);
+    }
+
+    private function getConsumidorFinalUserId(): ?int
+    {
+        $clienteFinal = User::whereRaw('LOWER(nombre) = ?', ['consumidor final'])
+            ->where('apellidos', '')
+            ->whereHas('role', function ($query) {
+                $query->whereRaw('LOWER(nombre) = ?', ['cliente']);
+            })
+            ->where('estado', true)
+            ->first(['id']);
+
+        return $clienteFinal ? $clienteFinal->id : null;
     }
 
     private function resolveMetodoPago(Request $request): MetodoPago

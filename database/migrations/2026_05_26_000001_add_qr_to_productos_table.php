@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('productos', function (Blueprint $table) {
-            $table->string('qr')->nullable()->after('marca');
-        });
+        if (! Schema::hasColumn('productos', 'qr')) {
+            Schema::table('productos', function (Blueprint $table) {
+                $table->string('qr')->nullable()->after('marca');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('productos', function (Blueprint $table) {
-            $table->dropColumn('qr');
-        });
+        // No-op: the column is already part of the base productos schema.
     }
 };

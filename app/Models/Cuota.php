@@ -27,6 +27,7 @@ class Cuota extends Model
     protected $casts = [
         'monto' => 'decimal:2',
         'interes_cuota' => 'decimal:2',
+        'mora' => 'decimal:2',
         'monto_pagado' => 'decimal:2',
         'monto_pendiente' => 'decimal:2',
         'fecha_vencimiento' => 'datetime',

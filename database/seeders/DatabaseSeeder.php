@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             UserSeeder::class,
+            ConsumidorFinalSeeder::class,
             MenuItemSeederClean::class,
             MetodosPagoSeeder::class,
         ]);

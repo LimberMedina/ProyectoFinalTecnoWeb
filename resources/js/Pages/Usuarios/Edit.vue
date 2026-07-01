@@ -1,7 +1,8 @@
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import { useRegisterValidation } from "@/composables/useRegisterValidation";
 
 const props = defineProps({
     usuario: Object,
@@ -22,6 +23,33 @@ const form = useForm({
 
 const previewFoto = ref(null);
 
+const {
+    errors: validationErrors,
+    updateError,
+    validateAll,
+} = useRegisterValidation();
+
+watch(
+    () => form.nombre,
+    (value) => updateError("nombre", value),
+);
+watch(
+    () => form.apellidos,
+    (value) => updateError("apellidos", value),
+);
+watch(
+    () => form.ci,
+    (value) => updateError("ci", value),
+);
+watch(
+    () => form.telefono,
+    (value) => updateError("telefono", value),
+);
+watch(
+    () => form.fecha_nacimiento,
+    (value) => updateError("fecha_nacimiento", value),
+);
+
 const handleFotoPerfil = (event) => {
     const [file] = event.target.files;
     form.foto_perfil = file || null;
@@ -29,6 +57,10 @@ const handleFotoPerfil = (event) => {
 };
 
 const submit = () => {
+    if (!validateAll(form)) {
+        return;
+    }
+
     form.post(route("usuarios.update", props.usuario.id), {
         preserveScroll: true,
         forceFormData: true,
@@ -111,6 +143,7 @@ const submit = () => {
                                 type="text"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
+                                    validationErrors.nombre ||
                                     form.errors.nombre
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
@@ -118,10 +151,16 @@ const submit = () => {
                                 required
                             />
                             <p
-                                v-if="form.errors.nombre"
+                                v-if="
+                                    validationErrors.nombre ||
+                                    form.errors.nombre
+                                "
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.nombre }}
+                                {{
+                                    validationErrors.nombre ||
+                                    form.errors.nombre
+                                }}
                             </p>
                         </div>
 
@@ -138,6 +177,7 @@ const submit = () => {
                                 type="text"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
+                                    validationErrors.apellidos ||
                                     form.errors.apellidos
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
@@ -145,10 +185,16 @@ const submit = () => {
                                 required
                             />
                             <p
-                                v-if="form.errors.apellidos"
+                                v-if="
+                                    validationErrors.apellidos ||
+                                    form.errors.apellidos
+                                "
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.apellidos }}
+                                {{
+                                    validationErrors.apellidos ||
+                                    form.errors.apellidos
+                                }}
                             </p>
                         </div>
 
@@ -164,17 +210,17 @@ const submit = () => {
                                 type="text"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
-                                    form.errors.ci
+                                    validationErrors.ci || form.errors.ci
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
                                 "
                                 required
                             />
                             <p
-                                v-if="form.errors.ci"
+                                v-if="validationErrors.ci || form.errors.ci"
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.ci }}
+                                {{ validationErrors.ci || form.errors.ci }}
                             </p>
                         </div>
 
@@ -190,16 +236,23 @@ const submit = () => {
                                 type="date"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
+                                    validationErrors.fecha_nacimiento ||
                                     form.errors.fecha_nacimiento
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
                                 "
                             />
                             <p
-                                v-if="form.errors.fecha_nacimiento"
+                                v-if="
+                                    validationErrors.fecha_nacimiento ||
+                                    form.errors.fecha_nacimiento
+                                "
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.fecha_nacimiento }}
+                                {{
+                                    validationErrors.fecha_nacimiento ||
+                                    form.errors.fecha_nacimiento
+                                }}
                             </p>
                         </div>
 
@@ -216,6 +269,7 @@ const submit = () => {
                                 type="tel"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
+                                    validationErrors.telefono ||
                                     form.errors.telefono
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
@@ -223,10 +277,16 @@ const submit = () => {
                                 required
                             />
                             <p
-                                v-if="form.errors.telefono"
+                                v-if="
+                                    validationErrors.telefono ||
+                                    form.errors.telefono
+                                "
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.telefono }}
+                                {{
+                                    validationErrors.telefono ||
+                                    form.errors.telefono
+                                }}
                             </p>
                         </div>
 
@@ -260,6 +320,7 @@ const submit = () => {
                                 v-model="form.role_id"
                                 class="w-full rounded-xl border px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                                 :class="
+                                    validationErrors.role_id ||
                                     form.errors.role_id
                                         ? 'border-rose-400 bg-rose-50'
                                         : 'border-slate-200 bg-white'
@@ -276,10 +337,16 @@ const submit = () => {
                                 </option>
                             </select>
                             <p
-                                v-if="form.errors.role_id"
+                                v-if="
+                                    validationErrors.role_id ||
+                                    form.errors.role_id
+                                "
                                 class="mt-2 text-sm text-rose-600"
                             >
-                                {{ form.errors.role_id }}
+                                {{
+                                    validationErrors.role_id ||
+                                    form.errors.role_id
+                                }}
                             </p>
                         </div>
 

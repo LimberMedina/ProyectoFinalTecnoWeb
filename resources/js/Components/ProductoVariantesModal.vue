@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
+import { showToast } from "@/utils/toast";
 
 const props = defineProps({
     show: Boolean,
@@ -13,9 +14,14 @@ const defaultVariant = () => ({
     sku: "",
     talla: "",
     color: "",
-    precio_compra: "",
-    precio_venta: "",
-    precio_venta_mayorista: "",
+    precio_compra: 0,
+    precio_venta:
+        props.producto?.precio_venta_base ?? props.producto?.precio_venta ?? "",
+    precio_venta_mayorista:
+        props.producto?.precio_venta_mayorista_base ??
+        props.producto?.precio_venta_mayorista ??
+        props.producto?.precio_venta_base ??
+        "",
     stock_actual: 0,
     stock_minimo: 0,
     punto_reorden: 0,
@@ -37,7 +43,22 @@ const resetForm = () => {
 
 const openCreateForm = () => {
     editingId.value = null;
-    Object.assign(form, defaultVariant());
+    Object.assign(form, {
+        ...defaultVariant(),
+        precio_venta:
+            props.producto?.precio_venta_base ??
+            props.producto?.precio_venta ??
+            "",
+        precio_venta_mayorista:
+            props.producto?.precio_venta_mayorista_base ??
+            props.producto?.precio_venta_mayorista ??
+            props.producto?.precio_venta_base ??
+            "",
+        precio_compra: 0,
+        stock_actual: 0,
+        stock_minimo: 0,
+        punto_reorden: 0,
+    });
     showFormModal.value = true;
 };
 
@@ -88,10 +109,27 @@ const submitVariant = () => {
     const options = {
         preserveScroll: true,
         onSuccess: () => {
+            showToast(
+                editingId.value
+                    ? "Variante actualizada correctamente."
+                    : "Variante registrada correctamente.",
+                "success",
+            );
             router.reload({ preserveScroll: true });
             editingId.value = null;
             showFormModal.value = false;
             form.clearErrors();
+        },
+        onError: (errors) => {
+            const firstErrorValue = Object.values(errors)[0];
+            const firstError = Array.isArray(firstErrorValue)
+                ? firstErrorValue[0]
+                : firstErrorValue;
+            showToast(
+                firstError ||
+                    "Error al guardar la variante. Verifica los campos e intenta nuevamente.",
+                "error",
+            );
         },
     };
 

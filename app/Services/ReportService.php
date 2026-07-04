@@ -20,7 +20,7 @@ class ReportService
     {
         return Venta::whereDate('created_at', today())
             ->where(function($q) {
-                $q->where('estado', 'completada')
+                $q->whereIn('estado', ['pagado', 'completada'])
                   ->orWhere('tipo_pago', 'credito');
             })
             ->count();
@@ -33,7 +33,7 @@ class ReportService
     {
         return Venta::whereBetween('created_at', [now()->subWeek(), now()])
             ->where(function($q) {
-                $q->where('estado', 'completada')
+                $q->whereIn('estado', ['pagado', 'completada'])
                   ->orWhere('tipo_pago', 'credito');
             })
             ->count();
@@ -47,7 +47,7 @@ class ReportService
         return Venta::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->where(function($q) {
-                $q->where('estado', 'completada')
+                $q->whereIn('estado', ['pagado', 'completada'])
                   ->orWhere('tipo_pago', 'credito');
             })
             ->count();
@@ -58,7 +58,7 @@ class ReportService
      */
     public function ingresosTotales($periodo = 'mes')
     {
-        $ventaQuery = Venta::where('estado', 'completada');
+        $ventaQuery = Venta::whereIn('estado', ['pagado', 'completada']);
         $pagoQuery = \App\Models\Pago::query();
 
         switch ($periodo) {
@@ -94,7 +94,7 @@ class ReportService
         return DB::table('detalle_venta')
             ->join('productos', 'detalle_venta.producto_id', '=', 'productos.id')
             ->join('ventas', 'detalle_venta.venta_id', '=', 'ventas.id')
-            ->where('ventas.estado', 'completada')
+            ->whereIn('ventas.estado', ['pagado', 'completada'])
             ->select(
                 'productos.nombre',
                 'productos.codigo',
@@ -182,11 +182,11 @@ class ReportService
     public function indicadoresCliente($userId)
     {
         $totalCompras = Venta::where('user_id', $userId)
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->count();
 
         $totalGastado = Venta::where('user_id', $userId)
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->sum('total');
 
         $creditosActivos = Credito::whereHas('venta', function($q) use ($userId) {
@@ -225,7 +225,7 @@ class ReportService
                 DB::raw('COUNT(*) as cantidad'),
                 DB::raw('SUM(total) as monto')
             )
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->whereBetween('created_at', [now()->subDays($dias), now()])
             ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('fecha', 'asc')
@@ -239,7 +239,7 @@ class ReportService
                 DB::raw('COUNT(*) as cantidad'),
                 DB::raw('SUM(total) as monto')
             )
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->groupBy(DB::raw("to_char(created_at, 'YYYY-MM-DD')"))
             ->orderBy('fecha', 'asc')
@@ -255,10 +255,10 @@ class ReportService
         $fechaFin = $fechaFin ?: now()->endOfDay();
 
         return [
-            'ventas_totales' => Venta::where('estado', 'completada')
+            'ventas_totales' => Venta::whereIn('estado', ['pagado', 'completada'])
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->count(),
-            'ingresos_totales' => Venta::where('estado', 'completada')
+            'ingresos_totales' => Venta::whereIn('estado', ['pagado', 'completada'])
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->sum('total'),
             'ventas_hoy' => $this->ventasDia(),
@@ -291,7 +291,7 @@ class ReportService
                 DB::raw("date_part('hour', created_at) as hora"),
                 DB::raw('SUM(total) as monto_total')
             )
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->groupBy('origen', DB::raw("date_part('hour', created_at)"))
             ->orderBy('hora')
@@ -305,7 +305,7 @@ class ReportService
                 DB::raw('AVG(total) as promedio_total'),
                 DB::raw('COUNT(*) as cantidad_ventas')
             )
-            ->where('estado', 'completada')
+            ->whereIn('estado', ['pagado', 'completada'])
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->groupBy(DB::raw("to_char(created_at, 'YYYY-MM')"))
             ->orderBy('periodo')
@@ -314,11 +314,11 @@ class ReportService
 
     public function ventasPorCategoria($fechaInicio, $fechaFin, $limite = 6)
     {
-        return DB::table('detalle_venta')
+        $rows = DB::table('detalle_venta')
             ->join('productos', 'detalle_venta.producto_id', '=', 'productos.id')
             ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
             ->join('ventas', 'detalle_venta.venta_id', '=', 'ventas.id')
-            ->where('ventas.estado', 'completada')
+            ->whereIn('ventas.estado', ['pagado', 'completada'])
             ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin])
             ->select(
                 'categorias.nombre as categoria',
@@ -329,19 +329,29 @@ class ReportService
             ->orderByDesc('total_cantidad')
             ->limit($limite)
             ->get();
+
+        return $rows->map(function ($row) {
+            return [
+                'categoria' => $row->categoria ?? 'Sin categoría',
+                'total_cantidad' => (float) ($row->total_cantidad ?? 0),
+                'ingresos' => (float) ($row->ingresos ?? 0),
+            ];
+        });
     }
 
     public function pagosContadoCredito($fechaInicio, $fechaFin)
     {
-        $contado = (float) Venta::where('estado', 'completada')
+        $contado = (float) Venta::whereIn('estado', ['pagado', 'completada'])
             ->where('tipo_pago', 'contado')
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->sum('total');
 
-        $credito = (float) Pago::whereNotNull('cuota_id')
-            ->where(function ($query) {
-                $query->where('pago_facil_status', 'completed')
-                    ->orWhereNull('pago_facil_status');
+        $credito = (float) Pago::where(function ($query) {
+                $query->whereNotNull('cuota_id')
+                    ->where(function ($sub) {
+                        $sub->where('pago_facil_status', 'completed')
+                            ->orWhereNull('pago_facil_status');
+                    });
             })
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
             ->sum('monto');
@@ -385,7 +395,7 @@ class ReportService
         return DB::table('metodos_pago')
             ->leftJoin('ventas', function ($join) use ($fechaInicio, $fechaFin) {
                 $join->on('ventas.metodo_pago_id', '=', 'metodos_pago.id')
-                    ->where('ventas.estado', 'completada')
+                    ->whereIn('ventas.estado', ['pagado', 'completada'])
                     ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin]);
             })
             ->select(

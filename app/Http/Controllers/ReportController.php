@@ -112,38 +112,48 @@ class ReportController extends Controller
 
     protected function buildDonutChartData($metric, $fechaInicio, $fechaFin)
     {
-        return match ($metric) {
-            'pagos_contado_credito' => [
-                'labels' => $this->reportService->pagosContadoCredito($fechaInicio, $fechaFin)->pluck('tipo_pago')->toArray(),
+        if ($metric === 'pagos_contado_credito') {
+            $rows = $this->reportService->pagosContadoCredito($fechaInicio, $fechaFin);
+
+            return [
+                'labels' => $rows->pluck('tipo_pago')->toArray(),
                 'datasets' => [
                     [
                         'label' => 'Ingresos',
-                        'data' => $this->reportService->pagosContadoCredito($fechaInicio, $fechaFin)->pluck('monto_total')->toArray(),
+                        'data' => $rows->pluck('monto_total')->map(fn ($value) => (float) $value)->values()->toArray(),
                         'backgroundColor' => ['#22c55e', '#f97316'],
                     ],
                 ],
-            ],
-            'estado_pedidos' => [
-                'labels' => $this->reportService->estadoPedidos($fechaInicio, $fechaFin)->pluck('estado')->toArray(),
+            ];
+        }
+
+        if ($metric === 'estado_pedidos') {
+            $rows = $this->reportService->estadoPedidos($fechaInicio, $fechaFin);
+
+            return [
+                'labels' => $rows->pluck('estado')->toArray(),
                 'datasets' => [
                     [
                         'label' => 'Pedidos',
-                        'data' => $this->reportService->estadoPedidos($fechaInicio, $fechaFin)->pluck('cantidad')->toArray(),
+                        'data' => $rows->pluck('cantidad')->map(fn ($value) => (int) $value)->values()->toArray(),
                         'backgroundColor' => ['#0ea5e9', '#6366f1', '#f59e0b', '#ef4444'],
                     ],
                 ],
-            ],
-            default => [
-                'labels' => $this->reportService->ventasPorCategoria($fechaInicio, $fechaFin, 6)->pluck('categoria')->toArray(),
-                'datasets' => [
-                    [
-                        'label' => 'Participación',
-                        'data' => $this->reportService->ventasPorCategoria($fechaInicio, $fechaFin, 6)->pluck('total_cantidad')->toArray(),
-                        'backgroundColor' => ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'],
-                    ],
+            ];
+        }
+
+        $rows = $this->reportService->ventasPorCategoria($fechaInicio, $fechaFin, 6);
+
+        return [
+            'labels' => $rows->pluck('categoria')->values()->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Participación',
+                    'data' => $rows->pluck('total_cantidad')->map(fn ($value) => (float) $value)->values()->toArray(),
+                    'backgroundColor' => ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'],
                 ],
             ],
-        };
+        ];
     }
 
     protected function buildLineChartData($metric, $fechaInicio, $fechaFin)

@@ -269,6 +269,68 @@ const buildChartOptions = (type) => {
     return baseOptions;
 };
 
+const normalizeChartData = (type, payload) => {
+    const safePayload = payload || { labels: [], datasets: [] };
+    const labels =
+        Array.isArray(safePayload.labels) && safePayload.labels.length
+            ? safePayload.labels
+            : ["Sin datos"];
+
+    const datasets =
+        Array.isArray(safePayload.datasets) && safePayload.datasets.length
+            ? safePayload.datasets.map((serie) => ({ ...serie }))
+            : [
+                  {
+                      label: "Sin datos",
+                      data: [1],
+                      backgroundColor:
+                          type === "donut"
+                              ? ["#cbd5e1"]
+                              : type === "line"
+                                ? ["#94a3b8"]
+                                : ["#94a3b8"],
+                      borderColor: type === "line" ? "#64748b" : undefined,
+                  },
+              ];
+
+    datasets.forEach((serie) => {
+        const values = Array.isArray(serie.data) ? serie.data : [];
+        const normalizedValues = values.map((value) => Number(value) || 0);
+
+        if (!normalizedValues.length) {
+            serie.data = [1];
+        } else {
+            serie.data = normalizedValues;
+        }
+
+        if (type === "donut") {
+            if (!Array.isArray(serie.backgroundColor)) {
+                serie.backgroundColor = ["#cbd5e1"];
+            } else if (serie.backgroundColor.length < labels.length) {
+                while (serie.backgroundColor.length < labels.length) {
+                    serie.backgroundColor.push(
+                        serie.backgroundColor[serie.backgroundColor.length - 1] || "#94a3b8",
+                    );
+                }
+            }
+        }
+
+        if (type === "line") {
+            serie.fill = true;
+            serie.borderWidth = 2;
+            serie.tension = 0.3;
+            serie.pointRadius = 4;
+        } else {
+            serie.fill = false;
+            serie.borderWidth = 2;
+            serie.tension = 0.4;
+            serie.pointRadius = 3;
+        }
+    });
+
+    return { labels, datasets };
+};
+
 const renderChart = (type) => {
     const canvas =
         type === "bar"
@@ -286,20 +348,12 @@ const renderChart = (type) => {
         instance.value.destroy();
     }
 
-    const dataset = chartData.value[type];
-    const datasets = dataset.datasets.map((serie) => ({
-        ...serie,
-        fill: type === "line",
-        borderWidth: 2,
-        tension: type === "line" ? 0.3 : 0.4,
-        pointRadius: type === "line" ? 4 : 3,
-    }));
-
+    const normalizedData = normalizeChartData(type, chartData.value[type]);
     instance.value = new Chart(canvas, {
         type: type === "donut" ? "doughnut" : type,
         data: {
-            labels: dataset.labels,
-            datasets,
+            labels: normalizedData.labels,
+            datasets: normalizedData.datasets,
         },
         options: buildChartOptions(type),
     });

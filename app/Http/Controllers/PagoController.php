@@ -105,7 +105,7 @@ class PagoController extends Controller
             $cuota = Cuota::with(['credito.venta.cliente'])->find($cuotaId);
         }
 
-        $metodosPago = MetodoPago::where('activo', true)->get();
+        $metodosPago = MetodoPago::all();
 
         return Inertia::render('Pagos/Registrar', [
             'cuota' => $cuota,

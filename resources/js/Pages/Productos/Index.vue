@@ -24,6 +24,8 @@ const productoVariantes = ref(null);
 const productoSeleccionado = ref(null);
 const showCantidadModal = ref(false);
 const varianteItems = ref([]);
+const isWholesaleMode = ref(false);
+const wholesaleWarning = ref("");
 
 const page = usePage();
 const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
@@ -162,8 +164,14 @@ const abrirModalCantidad = (producto) => {
             color: variant.color,
             stock_actual: Number(variant.stock_actual) || 0,
             precio_venta: Number(variant.precio_venta) || 0,
+            precio_venta_mayorista:
+                Number(variant.precio_venta_mayorista) ||
+                Number(variant.precio_venta) ||
+                0,
             cantidad: 0,
         }));
+    isWholesaleMode.value = false;
+    wholesaleWarning.value = "";
     showCantidadModal.value = true;
 };
 const abrirCarrito = (producto) => {
@@ -173,14 +181,41 @@ const abrirCarrito = (producto) => {
     }
     abrirModalCantidad(producto);
 };
+const toggleMayorista = () => {
+    isWholesaleMode.value = !isWholesaleMode.value;
+    wholesaleWarning.value = "";
+
+    if (isWholesaleMode.value && totalSeleccionado.value < 3) {
+        wholesaleWarning.value =
+            "Para aplicar el precio mayorista debes seleccionar al menos 3 unidades en total.";
+    }
+};
+
+const getVariantUnitPrice = (variant) => {
+    if (isWholesaleMode.value) {
+        return Number(
+            variant.precio_venta_mayorista || variant.precio_venta || 0,
+        );
+    }
+
+    return Number(variant.precio_venta || 0);
+};
+
 const agregarAlCarrito = () => {
     if (!productoSeleccionado.value) return;
+
+    if (isWholesaleMode.value && totalSeleccionado.value < 3) {
+        wholesaleWarning.value =
+            "Para comprar por mayor debes seleccionar al menos 3 unidades en total.";
+        return;
+    }
 
     const items = varianteItems.value
         .filter((variant) => Number(variant.cantidad) > 0)
         .map((variant) => ({
             producto_variante_id: variant.id,
             cantidad: Number(variant.cantidad),
+            tipo_venta: isWholesaleMode.value ? "mayorista" : "minorista",
         }));
 
     if (items.length === 0) {
@@ -198,6 +233,8 @@ const agregarAlCarrito = () => {
                 showCantidadModal.value = false;
                 productoSeleccionado.value = null;
                 varianteItems.value = [];
+                isWholesaleMode.value = false;
+                wholesaleWarning.value = "";
             },
         },
     );
@@ -227,8 +264,7 @@ const totalMontoSeleccionado = computed(() =>
     varianteItems.value.reduce(
         (sum, variant) =>
             sum +
-            (Number(variant.cantidad) || 0) *
-                (Number(variant.precio_venta) || 0),
+            (Number(variant.cantidad) || 0) * getVariantUnitPrice(variant),
         0,
     ),
 );
@@ -685,6 +721,53 @@ const totalMontoSeleccionado = computed(() =>
                 <template #title>Agregar al Carrito</template>
                 <template #content>
                     <div>
+                        <div
+                            class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-amber-800"
+                                    >
+                                        Compra por mayor
+                                    </p>
+                                    <p class="mt-1 text-xs text-amber-700">
+                                        Activa este modo para usar los precios
+                                        mayoristas. Debes seleccionar al menos 3
+                                        unidades en total para poder agregar al
+                                        carrito con ese precio.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                                    :class="
+                                        isWholesaleMode
+                                            ? 'border-amber-500 bg-amber-500 text-white'
+                                            : 'border-amber-200 bg-white text-amber-700 hover:bg-amber-100'
+                                    "
+                                    @click="toggleMayorista"
+                                >
+                                    {{
+                                        isWholesaleMode
+                                            ? "Mayorista activo"
+                                            : "Comprar por mayor"
+                                    }}
+                                </button>
+                            </div>
+                            <p
+                                v-if="wholesaleWarning"
+                                class="mt-2 text-xs font-medium"
+                                :class="
+                                    totalSeleccionado >= 3
+                                        ? 'text-emerald-700'
+                                        : 'text-amber-700'
+                                "
+                            >
+                                {{ wholesaleWarning }}
+                            </p>
+                        </div>
+
                         <p class="mb-4">
                             Selecciona tallas y colores para
                             <strong>{{ productoSeleccionado?.nombre }}</strong
@@ -714,7 +797,16 @@ const totalMontoSeleccionado = computed(() =>
                                     <p class="text-xs text-slate-500">
                                         Stock: {{ variant.stock_actual }} ·
                                         Precio:
-                                        {{ formatPrice(variant.precio_venta) }}
+                                        {{
+                                            formatPrice(
+                                                getVariantUnitPrice(variant),
+                                            )
+                                        }}
+                                        <span
+                                            v-if="isWholesaleMode"
+                                            class="ml-1 font-semibold text-amber-600"
+                                            >(mayorista)</span
+                                        >
                                     </p>
                                 </div>
 
@@ -757,9 +849,16 @@ const totalMontoSeleccionado = computed(() =>
                     <button
                         class="px-4 py-2 rounded-md bg-emerald-600 text-white"
                         @click="agregarAlCarrito"
-                        :disabled="totalSeleccionado < 1"
+                        :disabled="
+                            totalSeleccionado < 1 ||
+                            (isWholesaleMode && totalSeleccionado < 3)
+                        "
                     >
-                        Agregar al carrito
+                        {{
+                            isWholesaleMode
+                                ? "Agregar al carrito (mayorista)"
+                                : "Agregar al carrito"
+                        }}
                     </button>
                 </template>
             </ConfirmationModal>

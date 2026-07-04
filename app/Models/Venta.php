@@ -16,6 +16,7 @@ class Venta extends Model
         'vendedor_id',
         'metodo_pago_id',
         'tipo_pago',
+        'tipo_venta',
         'total',
         'estado',
         'numero_venta',

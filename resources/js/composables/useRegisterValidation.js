@@ -250,7 +250,11 @@ export function useRegisterValidation() {
     };
 
     // Validar todo el formulario
-    const validateAll = (formData) => {
+    const validateAll = (formData, options = {}) => {
+        const shouldValidateRoleId =
+            options.shouldValidateRoleId ??
+            Object.prototype.hasOwnProperty.call(formData, "role_id");
+
         errors.value.nombre = validateNombre(formData.nombre);
         errors.value.apellidos = validateApellidos(formData.apellidos);
         errors.value.ci = validateCI(formData.ci);
@@ -259,7 +263,9 @@ export function useRegisterValidation() {
         errors.value.fecha_nacimiento = validateFechaNacimiento(
             formData.fecha_nacimiento,
         );
-        errors.value.role_id = validateRoleId(formData.role_id);
+        errors.value.role_id = shouldValidateRoleId
+            ? validateRoleId(formData.role_id)
+            : "";
         errors.value.password = validatePassword(formData.password);
         errors.value.password_confirmation = validatePasswordConfirmation(
             formData.password,

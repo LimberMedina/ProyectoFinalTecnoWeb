@@ -7,7 +7,7 @@ import FlashNotification from "@/Components/FlashNotification.vue";
 import UpdateProfileInformationForm from "@/Pages/Profile/Partials/UpdateProfileInformationForm.vue";
 
 const page = usePage();
-const user = page.props.auth?.user || {};
+const user = computed(() => page.props.auth?.user || {});
 const userRole = computed(() => page.props.auth?.user?.role || {});
 const isOwnerOrSeller = computed(() => {
     const roleId = String(userRole.value.id || "");

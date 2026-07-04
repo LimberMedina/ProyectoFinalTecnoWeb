@@ -11,6 +11,7 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Services\PagoFacilService;
 use App\Services\PromocionService;
+use App\Services\TipoVentaService;
 use App\Services\VentaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,14 +22,17 @@ class PedidoController extends Controller
 {
     protected PromocionService $promocionService;
     protected VentaService $ventaService;
+    protected TipoVentaService $tipoVentaService;
 
     public function __construct(
         PromocionService $promocionService,
         VentaService $ventaService,
+        TipoVentaService $tipoVentaService,
         protected PagoFacilService $pagoFacilService
     ) {
         $this->promocionService = $promocionService;
         $this->ventaService = $ventaService;
+        $this->tipoVentaService = $tipoVentaService;
     }
 
     /**
@@ -86,14 +90,11 @@ class PedidoController extends Controller
                     return null;
                 }
 
-                $precioOriginal = (float) $variante->precio_venta;
+                $precioPersistido = (float) ($detalle->precio_unitario ?? 0);
                 $descuentoPersistido = (float) ($detalle->descuento ?? 0);
-                $precioUnitario = $descuentoPersistido > 0
-                    ? round(max(0, $precioOriginal - $descuentoPersistido), 2)
-                    : round($precioOriginal, 2);
-                $montoDescuento = $descuentoPersistido > 0
-                    ? $descuentoPersistido
-                    : round(($precioOriginal * $this->promocionService->calcularDescuentoProducto($producto, 'minorista')) / 100, 2);
+                $precioUnitario = round(max(0, $precioPersistido), 2);
+                $precioOriginal = round($precioUnitario + $descuentoPersistido, 2);
+                $montoDescuento = round($descuentoPersistido, 2);
                 $subtotal = round($precioUnitario * (int) $detalle->cantidad, 2);
 
                 return [
@@ -107,6 +108,7 @@ class PedidoController extends Controller
                     ],
                     'cantidad' => (int) $detalle->cantidad,
                     'precio_unitario' => $precioUnitario,
+                    'precio_original' => $precioOriginal,
                     'descuento' => $montoDescuento,
                     'subtotal' => $subtotal,
                 ];
@@ -147,6 +149,8 @@ class PedidoController extends Controller
         }
 
         $detalles = $this->prepararDetallesVenta($carrito);
+        $tipoVenta = session()->get("carrito_tipo_venta.{$request->user()->id}", 'minorista');
+        $tipoVenta = in_array($tipoVenta, ['minorista', 'mayorista'], true) ? $tipoVenta : 'minorista';
 
         if (empty($detalles)) {
             return redirect()->route('carritos.index')
@@ -179,6 +183,7 @@ class PedidoController extends Controller
                 // Marcar como pedido/venta generado desde la web (checkout)
                 'origen' => 'online',
                 'direccion_entrega' => $request->direccion_entrega,
+                'tipo_venta' => $tipoVenta,
             ]);
 
             foreach ($carrito->detalles as $detalle) {
@@ -231,14 +236,10 @@ class PedidoController extends Controller
                     return null;
                 }
 
-                $precioOriginal = (float) $variante->precio_venta;
+                $precioPersistido = (float) ($detalle->precio_unitario ?? 0);
                 $descuentoPersistido = (float) ($detalle->descuento ?? 0);
-                $precioUnitario = $descuentoPersistido > 0
-                    ? round(max(0, $precioOriginal - $descuentoPersistido), 2)
-                    : round($precioOriginal, 2);
-                $montoDescuento = $descuentoPersistido > 0
-                    ? $descuentoPersistido
-                    : round(($precioOriginal * $this->promocionService->calcularDescuentoProducto($producto, 'minorista')) / 100, 2);
+                $precioUnitario = round(max(0, $precioPersistido), 2);
+                $montoDescuento = round($descuentoPersistido, 2);
                 $subtotal = round($precioUnitario * (int) $detalle->cantidad, 2);
 
                 return [
@@ -283,14 +284,8 @@ class PedidoController extends Controller
             throw new \Exception('Una de las variantes del carrito no existe.');
         }
 
-        $precioOriginal = (float) $variante->precio_venta;
-        $descuentoPersistido = (float) ($detalle->descuento ?? 0);
-        $precioUnitario = $descuentoPersistido > 0
-            ? round(max(0, $precioOriginal - $descuentoPersistido), 2)
-            : round($precioOriginal, 2);
-        $montoDescuento = $descuentoPersistido > 0
-            ? $descuentoPersistido
-            : round(($precioOriginal * $this->promocionService->calcularDescuentoProducto($producto, 'minorista')) / 100, 2);
+        $precioUnitario = round((float) ($detalle->precio_unitario ?? 0), 2);
+        $montoDescuento = round((float) ($detalle->descuento ?? 0), 2);
         $subtotal = round($precioUnitario * (int) $detalle->cantidad, 2);
 
         $detalleVenta = VentaDetalle::create([

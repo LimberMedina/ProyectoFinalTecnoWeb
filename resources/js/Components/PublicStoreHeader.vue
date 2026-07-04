@@ -28,6 +28,7 @@ const unreadNotificationsCount = computed(
 );
 const showProfileMenu = ref(false);
 const showNotificationsPanel = ref(false);
+const showMobileMenu = ref(false);
 const notificationsLoading = ref(false);
 const recentNotifications = ref([]);
 
@@ -87,18 +88,35 @@ const closeNotificationsPanel = () => {
 };
 
 const handleClickOutside = (event) => {
-    const panel = document.querySelector("[data-notifications-panel]");
-    const button = document.querySelector("[data-notifications-button]");
+    const notificationsPanel = document.querySelector(
+        "[data-notifications-panel]",
+    );
+    const notificationsButton = document.querySelector(
+        "[data-notifications-button]",
+    );
+    const mobilePanel = document.querySelector("[data-mobile-menu-panel]");
+    const mobileButton = document.querySelector("[data-mobile-menu-button]");
 
-    if (!panel || !button) {
+    if (
+        notificationsPanel &&
+        notificationsButton &&
+        (notificationsPanel.contains(event.target) ||
+            notificationsButton.contains(event.target))
+    ) {
         return;
     }
 
-    if (panel.contains(event.target) || button.contains(event.target)) {
+    if (
+        mobilePanel &&
+        mobileButton &&
+        (mobilePanel.contains(event.target) ||
+            mobileButton.contains(event.target))
+    ) {
         return;
     }
 
     closeNotificationsPanel();
+    closeMobileMenu();
 };
 
 onMounted(() => {
@@ -115,6 +133,14 @@ const toggleProfileMenu = () => {
 
 const closeProfileMenu = () => {
     showProfileMenu.value = false;
+};
+
+const closeMobileMenu = () => {
+    showMobileMenu.value = false;
+};
+
+const toggleMobileMenu = () => {
+    showMobileMenu.value = !showMobileMenu.value;
 };
 
 const handleLogout = () => {
@@ -216,6 +242,27 @@ const currentUrl = computed(() => page.url);
             </div>
 
             <div class="flex items-start justify-end gap-2 sm:gap-3">
+                <button
+                    type="button"
+                    data-mobile-menu-button
+                    class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-600 hover:shadow-sm lg:hidden"
+                    aria-label="Abrir menú móvil"
+                    @click.stop="toggleMobileMenu"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M4 7h16M4 12h16M4 17h16" />
+                    </svg>
+                </button>
+
                 <div class="relative">
                     <button
                         data-notifications-button
@@ -624,6 +671,60 @@ const currentUrl = computed(() => page.url);
                 </template>
             </div>
         </div>
+
+        <transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-120 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
+        >
+            <div
+                v-if="showMobileMenu"
+                data-mobile-menu-panel
+                class="lg:hidden absolute inset-x-0 top-full z-[60] border-t border-slate-200 bg-white shadow-[0_24px_80px_-28px_rgba(15,23,42,0.35)]"
+            >
+                <div class="space-y-4 px-4 py-4">
+                    <div
+                        class="rounded-3xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                        <GlobalSearch />
+                    </div>
+
+                    <nav class="space-y-2">
+                        <Link
+                            :href="homeHref"
+                            @click="closeMobileMenu"
+                            class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                            Inicio
+                        </Link>
+                        <Link
+                            :href="productsHref"
+                            @click="closeMobileMenu"
+                            class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                            Productos
+                        </Link>
+                        <Link
+                            :href="categoriesHref"
+                            @click="closeMobileMenu"
+                            class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                            Categorías
+                        </Link>
+                        <Link
+                            :href="offersHref"
+                            @click="closeMobileMenu"
+                            class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                            Promociones
+                        </Link>
+                    </nav>
+                </div>
+            </div>
+        </transition>
     </header>
 
     <PageVisitCounter />

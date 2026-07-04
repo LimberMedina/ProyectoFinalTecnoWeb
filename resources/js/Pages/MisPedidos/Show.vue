@@ -1,13 +1,88 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import PublicStoreLayout from "@/Layouts/PublicStoreLayout.vue";
 import FlashNotification from "@/Components/FlashNotification.vue";
 import { Link, router } from "@inertiajs/vue3";
 import QRPayment from "@/Components/QRPayment.vue";
+import axios from "axios";
+import { showToast } from "@/utils/toast";
 
 const props = defineProps({
     pedido: Object,
+    metodosPago: Array,
 });
+
+const mostrarModalPago = ref(false);
+const metodoPagoSeleccionado = ref(props.pedido.metodo_pago_id || "");
+const pagoQRLoading = ref(false);
+const noRecibidoLoading = ref(false);
+
+const isMetodoQRSeleccionado = computed(() => {
+    const metodo = props.metodosPago?.find(
+        (m) => String(m.id) === String(metodoPagoSeleccionado.value),
+    );
+    return metodo && String(metodo.nombre).toLowerCase().includes("qr");
+});
+
+const abrirModalPago = () => {
+    metodoPagoSeleccionado.value = props.pedido.metodo_pago_id || "";
+    mostrarModalPago.value = true;
+};
+
+const cerrarModalPago = () => {
+    mostrarModalPago.value = false;
+};
+
+const generarQRPedido = async () => {
+    if (!metodoPagoSeleccionado.value) {
+        showToast("Selecciona un método de pago primero.", "error");
+        return;
+    }
+
+    pagoQRLoading.value = true;
+
+    try {
+        const response = await axios.post(
+            route("mis-pedidos.generar-qr", { id: props.pedido.id }),
+            {
+                metodo_pago_id: metodoPagoSeleccionado.value,
+            },
+        );
+
+        const data = response.data;
+
+        if (data.success) {
+            if (isMetodoQRSeleccionado.value) {
+                showToast(
+                    "Se generó un nuevo QR. Escanea para completar el pago.",
+                    "success",
+                );
+            } else {
+                showToast(
+                    data.message || "Método de pago actualizado.",
+                    "success",
+                );
+            }
+
+            cerrarModalPago();
+            setTimeout(() => {
+                router.reload({ preserveScroll: false });
+            }, 600);
+        } else {
+            showToast(data.message || "No fue posible generar el QR.", "error");
+        }
+    } catch (error) {
+        console.error("Error generando QR del pedido:", error);
+        showToast(
+            error.response?.data?.message ||
+                error.response?.data?.error ||
+                "Error al generar el QR del pedido.",
+            "error",
+        );
+    } finally {
+        pagoQRLoading.value = false;
+    }
+};
 
 const formatMoney = (amount) =>
     new Intl.NumberFormat("es-BO", {
@@ -41,6 +116,43 @@ const confirmarRecepcion = () => {
         router.post(
             route("mis-pedidos.confirmar-recepcion", { id: props.pedido.id }),
         );
+    }
+};
+
+const marcarNoRecibido = async () => {
+    if (
+        !confirm(
+            `¿Deseas notificar al propietario que no recibiste el pedido #${props.pedido.numero_venta}?`,
+        )
+    ) {
+        return;
+    }
+
+    noRecibidoLoading.value = true;
+
+    try {
+        const response = await axios.post(
+            route("mis-pedidos.no-recibido", { id: props.pedido.id }),
+        );
+
+        showToast(
+            response.data.message ||
+                "Se notificó al propietario que no recibiste el pedido.",
+            "success",
+        );
+
+        setTimeout(() => {
+            router.reload({ preserveScroll: false });
+        }, 600);
+    } catch (error) {
+        console.error("Error al reportar pedido no recibido:", error);
+        showToast(
+            error.response?.data?.message ||
+                "Error al reportar el pedido no recibido.",
+            "error",
+        );
+    } finally {
+        noRecibidoLoading.value = false;
     }
 };
 </script>
@@ -264,7 +376,8 @@ const confirmarRecepcion = () => {
 
                             <button
                                 @click="confirmarRecepcion"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                :disabled="noRecibidoLoading"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -281,6 +394,31 @@ const confirmarRecepcion = () => {
                                     />
                                 </svg>
                                 Confirmar recepción conforme
+                            </button>
+                            <button
+                                @click="marcarNoRecibido"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 mt-3"
+                                :disabled="pagoQRLoading || noRecibidoLoading"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M12 8v8m4-4H8"
+                                    />
+                                </svg>
+                                {{
+                                    noRecibidoLoading
+                                        ? "Reportando..."
+                                        : "Pedido no recibido"
+                                }}
                             </button>
                         </div>
 
@@ -628,14 +766,11 @@ const confirmarRecepcion = () => {
 
                         <!-- QR de pago -->
                         <div
-                            v-if="
-                                pedido.estado === 'pendiente' &&
-                                pedido.pago_facil_qr_image
-                            "
+                            v-if="pedido.estado === 'pendiente'"
                             class="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_18px_60px_-30px_rgba(15,23,42,0.25)]"
                         >
                             <div
-                                class="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5"
+                                class="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <div>
                                     <p
@@ -649,12 +784,14 @@ const confirmarRecepcion = () => {
                                         Escanea para pagar
                                     </h2>
                                 </div>
-                                <div
-                                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50"
+                                <button
+                                    type="button"
+                                    @click="abrirModalPago"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700"
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        class="h-5 w-5 text-emerald-600"
+                                        class="h-4 w-4"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -666,21 +803,40 @@ const confirmarRecepcion = () => {
                                             d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
                                         />
                                     </svg>
-                                </div>
+                                    Pagar este pedido
+                                </button>
                             </div>
 
-                            <QRPayment
-                                :qr-image="pedido.pago_facil_qr_image"
-                                :transaction-id="
-                                    pedido.pago_facil_transaction_id
-                                "
-                                :monto="pedido.total"
-                                :descripcion="`Pedido #${pedido.numero_venta}`"
-                                :status="pedido.pago_facil_status || 'pending'"
-                                :venta-id="pedido.id"
-                                :auto-check="true"
-                                :check-interval="5000"
-                            />
+                            <div class="space-y-4">
+                                <QRPayment
+                                    v-if="pedido.pago_facil_qr_image"
+                                    :qr-image="pedido.pago_facil_qr_image"
+                                    :transaction-id="
+                                        pedido.pago_facil_transaction_id
+                                    "
+                                    :monto="pedido.total"
+                                    :descripcion="`Pedido #${pedido.numero_venta}`"
+                                    :status="
+                                        pedido.pago_facil_status || 'pending'
+                                    "
+                                    :venta-id="pedido.id"
+                                    :auto-check="true"
+                                    :check-interval="5000"
+                                />
+
+                                <div
+                                    v-else
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-700"
+                                >
+                                    <p class="font-semibold text-slate-900">
+                                        No hay QR activo.
+                                    </p>
+                                    <p class="mt-2 text-slate-600">
+                                        Pulsa el botón "Pagar este pedido" para
+                                        generar un nuevo QR de PagoFácil.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Estado: pagado o enviado -->
@@ -771,6 +927,160 @@ const confirmarRecepcion = () => {
                                 </div>
                             </div>
                         </div>
+
+                        <transition name="fade">
+                            <div
+                                v-if="mostrarModalPago"
+                                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+                            >
+                                <div
+                                    class="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)]"
+                                >
+                                    <div
+                                        class="mb-6 flex items-start justify-between gap-4"
+                                    >
+                                        <div>
+                                            <p
+                                                class="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700"
+                                            >
+                                                Pago del pedido
+                                            </p>
+                                            <h3
+                                                class="mt-1 text-xl font-black text-slate-900"
+                                            >
+                                                Selecciona el método de pago
+                                            </h3>
+                                            <p
+                                                class="mt-1 text-sm text-slate-500"
+                                            >
+                                                Si eliges QR, se generará un
+                                                nuevo código de PagoFácil para
+                                                este pedido.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                            @click="cerrarModalPago"
+                                            :disabled="pagoQRLoading"
+                                            aria-label="Cerrar modal"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-5 w-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="1.5"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="space-y-5">
+                                        <div>
+                                            <label
+                                                class="mb-2 block text-sm font-bold text-slate-700"
+                                            >
+                                                Método de pago
+                                            </label>
+                                            <select
+                                                v-model="metodoPagoSeleccionado"
+                                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                                            >
+                                                <option value="" disabled>
+                                                    Selecciona un método de pago
+                                                </option>
+                                                <option
+                                                    v-for="metodo in props.metodosPago"
+                                                    :key="metodo.id"
+                                                    :value="metodo.id"
+                                                >
+                                                    {{ metodo.nombre }}
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <div
+                                            v-if="isMetodoQRSeleccionado"
+                                            class="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-sm text-emerald-800"
+                                        >
+                                            <p class="font-semibold">
+                                                QR seleccionado
+                                            </p>
+                                            <p class="mt-1">
+                                                Se generará un nuevo código QR
+                                                de PagoFácil para este pedido y
+                                                podrás verificar el pago
+                                                automáticamente.
+                                            </p>
+                                        </div>
+
+                                        <div
+                                            v-else
+                                            class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700"
+                                        >
+                                            <p class="font-semibold">
+                                                Método distinto a QR
+                                            </p>
+                                            <p class="mt-1">
+                                                Se actualizará el método de
+                                                pago. Si quieres pagar con QR,
+                                                elige una opción que incluya
+                                                "QR".
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            @click="cerrarModalPago"
+                                            :disabled="pagoQRLoading"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            @click="generarQRPedido"
+                                            :disabled="
+                                                !metodoPagoSeleccionado ||
+                                                pagoQRLoading
+                                            "
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="1.5"
+                                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                                                />
+                                            </svg>
+                                            {{
+                                                pagoQRLoading
+                                                    ? "Procesando..."
+                                                    : "Confirmar pago"
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </transition>
                     </section>
                 </div>
             </main>

@@ -149,6 +149,7 @@ const getEstadoClass = (estado) => {
                                 <th class="px-6 py-4">Cliente</th>
                                 <th class="px-6 py-4">Método Pago</th>
                                 <th class="px-6 py-4">Tipo de Pago</th>
+                                <th class="px-6 py-4">Tipo de Venta</th>
                                 <th
                                     v-if="filtroOrigen === 'online'"
                                     class="px-6 py-4"
@@ -206,6 +207,22 @@ const getEstadoClass = (estado) => {
                                             venta.tipo_pago === "credito"
                                                 ? "A Crédito"
                                                 : "Al Contado"
+                                        }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                                        :class="
+                                            venta.tipo_venta === 'mayorista'
+                                                ? 'bg-violet-100 text-violet-700'
+                                                : 'bg-emerald-100 text-emerald-700'
+                                        "
+                                    >
+                                        {{
+                                            venta.tipo_venta === "mayorista"
+                                                ? "Mayorista"
+                                                : "Minorista"
                                         }}
                                     </span>
                                 </td>

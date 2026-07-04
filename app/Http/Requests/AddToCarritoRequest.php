@@ -19,6 +19,8 @@ class AddToCarritoRequest extends FormRequest
             'items' => 'required_without:producto_variante_id|array|min:1',
             'items.*.producto_variante_id' => 'required_with:items|exists:producto_variante,id',
             'items.*.cantidad' => 'required_with:items|integer|min:1',
+            'items.*.tipo_venta' => 'nullable|in:minorista,mayorista',
+            'tipo_venta' => 'nullable|in:minorista,mayorista',
         ];
     }
 
@@ -40,6 +42,8 @@ class AddToCarritoRequest extends FormRequest
             'items.*.cantidad.required_with' => 'Cada variante debe incluir cantidad.',
             'items.*.cantidad.integer' => 'La cantidad por variante debe ser un entero.',
             'items.*.cantidad.min' => 'La cantidad por variante debe ser al menos 1.',
+            'items.*.tipo_venta.in' => 'El tipo de venta debe ser minorista o mayorista.',
+            'tipo_venta.in' => 'El tipo de venta debe ser minorista o mayorista.',
         ];
     }
 

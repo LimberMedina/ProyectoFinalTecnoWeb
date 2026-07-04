@@ -18,17 +18,17 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
      */
     public function update(User $user, array $input): void
     {
-        $nombre = $input['nombre'] ?? $input['name'] ?? null;
+        $nombre = $input['nombre'] ?? $input['name'] ?? $user->nombre;
         $hasDireccionColumn = Schema::hasColumn('users', 'direccion');
 
         $rules = [
-            'nombre' => ['required_without:name', 'string', 'max:255'],
-            'name' => ['required_without:nombre', 'string', 'max:255'],
+            'nombre' => ['nullable', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
             'apellidos' => ['nullable', 'string', 'max:255'],
             'ci' => ['nullable', 'string', 'max:20', Rule::unique('users')->ignore($user->id)],
             'telefono' => ['nullable', 'string', 'max:15'],
             'fecha_nacimiento' => ['nullable', 'date'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
         ];
 
@@ -42,7 +42,9 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $user->updateProfilePhoto($input['photo']);
         }
 
-        if ($input['email'] !== $user->email &&
+        $inputEmail = $input['email'] ?? null;
+
+        if ($inputEmail !== $user->email &&
             $user instanceof MustVerifyEmail) {
             $this->updateVerifiedUser($user, $input);
         } else {
@@ -52,7 +54,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'ci' => $input['ci'] ?? $user->ci,
                 'telefono' => $input['telefono'] ?? $user->telefono,
                 'fecha_nacimiento' => $input['fecha_nacimiento'] ?? $user->fecha_nacimiento,
-                'email' => $input['email'],
+                'email' => $inputEmail ?? $user->email,
             ];
 
             if ($hasDireccionColumn) {
@@ -79,7 +81,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'ci' => $input['ci'] ?? $user->ci,
             'telefono' => $input['telefono'] ?? $user->telefono,
             'fecha_nacimiento' => $input['fecha_nacimiento'] ?? $user->fecha_nacimiento,
-            'email' => $input['email'],
+            'email' => $input['email'] ?? $user->email,
             'email_verified_at' => null,
         ];
 

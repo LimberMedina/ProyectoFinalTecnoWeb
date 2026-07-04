@@ -361,7 +361,9 @@ Route::middleware([
         // Mis Pedidos - Solo Cliente
         Route::get('/mis-pedidos', [MisPedidosController::class, 'index'])->name('mis-pedidos.index');
         Route::get('/mis-pedidos/{id}/detalles', [MisPedidosController::class, 'show'])->name('mis-pedidos.show');
+        Route::post('/mis-pedidos/{id}/generar-qr', [MisPedidosController::class, 'generarQR'])->name('mis-pedidos.generar-qr');
         Route::post('/mis-pedidos/{id}/confirmar', [MisPedidosController::class, 'confirmarRecibido'])->name('mis-pedidos.confirmar-recepcion');
+        Route::post('/mis-pedidos/{id}/no-recibido', [MisPedidosController::class, 'reportarNoRecibido'])->name('mis-pedidos.no-recibido');
         
         // Mis Pagos -Solo Cliente
         Route::get('/mis-pagos', [\App\Http\Controllers\MisPagosController::class, 'index'])->name('mis-pagos.index');

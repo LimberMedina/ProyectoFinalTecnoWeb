@@ -80,7 +80,7 @@ const isAuthenticated = computed(() => Boolean(usePage().props.auth?.user));
                                 Comprar ahora
                             </Link>
                             <a
-                                href="#categorias"
+                                href="/categorias"
                                 class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-6 py-3 text-sm font-semibold text-emerald-700 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50"
                             >
                                 Explorar categorías

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { Link, router, useForm } from "@inertiajs/vue3";
+import { showToast } from "@/utils/toast";
 
 const props = defineProps({
     user: Object,
@@ -27,48 +28,63 @@ const form = useForm({
 const verificationLinkSent = ref(false);
 const photoPreview = ref(null);
 const photoInput = ref(null);
-const showFeedback = ref(false);
-const feedbackType = ref("success");
-const feedbackMessage = ref("");
 
-let feedbackTimeout;
+const displayName = computed(() => {
+    const rawName = props.user?.nombre || props.user?.name || "";
+    const name = String(rawName).trim();
 
-const hasProfilePhoto = computed(() => Boolean(props.user.profile_photo_path));
-
-const openFeedback = (type, message) => {
-    feedbackType.value = type;
-    feedbackMessage.value = message;
-    showFeedback.value = true;
-
-    if (feedbackTimeout) {
-        clearTimeout(feedbackTimeout);
+    if (!name) {
+        return "Usuario";
     }
 
-    feedbackTimeout = setTimeout(() => {
-        showFeedback.value = false;
-    }, 2000);
+    return name.split(" ")[0];
+});
+const fallbackPhotoUrl = computed(
+    () =>
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value)}&background=10b981&color=ffffff`,
+);
+const profilePhotoUrl = computed(() => {
+    if (props.user?.profile_photo_path) {
+        return `/storage/${props.user.profile_photo_path}`;
+    }
+
+    if (props.user?.profile_photo_url) {
+        return props.user.profile_photo_url;
+    }
+
+    return fallbackPhotoUrl.value;
+});
+const hasProfilePhoto = computed(() =>
+    Boolean(props.user.profile_photo_path || props.user.profile_photo_url),
+);
+
+const handlePhotoError = (event) => {
+    event.target.src = fallbackPhotoUrl.value;
 };
 
 const updateProfileInformation = () => {
-    showFeedback.value = false;
-
     if (photoInput.value) {
-        form.photo = photoInput.value.files[0];
+        form.photo = photoInput.value.files?.[0] ?? null;
     }
 
     form.post(route("user-profile-information.update"), {
+        forceFormData: true,
         errorBag: "updateProfileInformation",
         preserveScroll: true,
         onSuccess: () => {
             clearPhotoFileInput();
-            openFeedback("success", "Perfil actualizado exitosamente");
+            showToast("Perfil actualizado exitosamente.", "success");
+            router.visit(route("perfil.show"), {
+                preserveState: false,
+                preserveScroll: true,
+            });
         },
         onError: (errors) => {
             const firstError = Object.values(errors)[0];
-            openFeedback(
-                "error",
+            showToast(
                 firstError ||
                     "No se pudo actualizar el perfil. Verifica los datos e inténtalo nuevamente.",
+                "error",
             );
         },
     });
@@ -115,78 +131,6 @@ const clearPhotoFileInput = () => {
 
 <template>
     <div>
-        <Transition
-            enter-active-class="transition duration-300 ease-out"
-            enter-from-class="opacity-0 scale-90"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition duration-200 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
-        >
-            <div
-                v-if="showFeedback"
-                class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/20 px-4"
-            >
-                <div
-                    class="w-full max-w-sm rounded-3xl border px-6 py-7 text-center shadow-2xl"
-                    :class="
-                        feedbackType === 'success'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                            : 'border-rose-200 bg-rose-50 text-rose-800'
-                    "
-                >
-                    <div
-                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
-                        :class="
-                            feedbackType === 'success'
-                                ? 'bg-emerald-100 text-emerald-600'
-                                : 'bg-rose-100 text-rose-600'
-                        "
-                    >
-                        <svg
-                            v-if="feedbackType === 'success'"
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-8 w-8"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.172 7.707 8.879a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        <svg
-                            v-else
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-8 w-8"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M18 10A8 8 0 114.293 4.293 8 8 0 0118 10zM9 7a1 1 0 112 0v3a1 1 0 11-2 0V7zm1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                    </div>
-
-                    <p class="mt-4 text-lg font-extrabold tracking-tight">
-                        {{
-                            feedbackType === "success"
-                                ? "Actualización correcta"
-                                : "Error al actualizar"
-                        }}
-                    </p>
-                    <p class="mt-2 text-sm font-semibold leading-6">
-                        {{ feedbackMessage }}
-                    </p>
-                </div>
-            </div>
-        </Transition>
-
         <form
             @submit.prevent="updateProfileInformation"
             class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -221,9 +165,10 @@ const clearPhotoFileInput = () => {
                     <div class="flex flex-wrap items-center gap-4">
                         <div v-show="!photoPreview">
                             <img
-                                :src="user.profile_photo_url"
-                                :alt="user.name"
+                                :src="profilePhotoUrl"
+                                :alt="displayName"
                                 class="h-24 w-24 rounded-full border border-slate-200 object-cover"
+                                @error="handlePhotoError"
                             />
                         </div>
 

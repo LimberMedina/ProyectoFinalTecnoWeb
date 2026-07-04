@@ -90,11 +90,12 @@ watch(
 
 const submit = () => {
     // Validar todo antes de enviar
-    if (!validateAll(form)) {
+    if (!validateAll(form, { shouldValidateRoleId: false })) {
         return;
     }
 
     form.post(route("register"), {
+        preserveScroll: true,
         onFinish: () => form.reset("password", "password_confirmation"),
     });
 };

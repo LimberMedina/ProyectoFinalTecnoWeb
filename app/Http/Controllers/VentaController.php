@@ -130,6 +130,7 @@ class VentaController extends Controller
             'cliente_id' => 'nullable|exists:users,id',
             'metodo_pago_id' => ['required_without:metodo_pago', 'nullable', 'exists:metodos_pago,id'],
             'metodo_pago' => ['required_without:metodo_pago_id', 'string'],
+            'tipo_venta' => ['nullable', 'in:minorista,mayorista'],
         ]);
 
         $metodoPago = $this->resolveMetodoPago($request);
@@ -188,6 +189,7 @@ class VentaController extends Controller
             $clienteId = $clienteId ?? auth()->id();
 
             $numeroVenta = $this->generarNumeroVenta();
+            $tipoVenta = $request->input('tipo_venta', 'minorista');
             
             $venta = Venta::create([
                 'numero_venta' => $numeroVenta,
@@ -195,6 +197,7 @@ class VentaController extends Controller
                 'vendedor_id' => auth()->user()->esVendedor() ? auth()->id() : null,
                 'metodo_pago_id' => $metodoPago->id,
                 'tipo_pago' => 'contado',
+                'tipo_venta' => $tipoVenta,
                 'total' => $total,
                 'origen' => 'tienda',
                 'estado' => $esMetodoQr ? 'pendiente' : 'completada',
@@ -347,7 +350,8 @@ class VentaController extends Controller
             'metodo_pago' => ['required_without:metodo_pago_id', 'string'],
             'cuotas' => 'required|integer|min:2|max:12',
             'fecha_inicio' => 'required|date|after_or_equal:today',
-            'tasa_interes' => 'nullable|numeric|min:0'
+            'tasa_interes' => 'nullable|numeric|min:0',
+            'tipo_venta' => ['nullable', 'in:minorista,mayorista'],
         ]);
 
         $metodoPago = $this->resolveMetodoPago($request);
@@ -397,6 +401,7 @@ class VentaController extends Controller
 
             // Crear venta primero
             $numeroVenta = $this->generarNumeroVenta();
+            $tipoVenta = $request->input('tipo_venta', 'minorista');
             
             $venta = Venta::create([
                 'numero_venta' => $numeroVenta,
@@ -404,6 +409,7 @@ class VentaController extends Controller
                 'vendedor_id' => auth()->id(),
                 'metodo_pago_id' => $metodoPago->id,
                 'tipo_pago' => 'credito',
+                'tipo_venta' => $tipoVenta,
                 'origen' => 'tienda',
                 'total' => $total,
                 'estado' => 'pendiente',

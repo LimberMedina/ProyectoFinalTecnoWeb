@@ -153,7 +153,31 @@ class User extends Authenticatable
     protected function name(): Attribute
     {
         return Attribute::make(
-            get: fn() => trim($this->nombre . ' ' . $this->apellidos),
+            get: fn() => $this->buildFullName(),
         );
+    }
+
+    private function buildFullName(): string
+    {
+        $nombre = trim((string) $this->nombre);
+        $apellidos = trim((string) $this->apellidos);
+
+        if ($nombre === '') {
+            return $apellidos ?: '';
+        }
+
+        if ($apellidos === '') {
+            return $nombre;
+        }
+
+        // Evitar duplicar el apellido si ya está incluido en el campo nombre
+        $lowerNombre = mb_strtolower($nombre);
+        $lowerApellidos = mb_strtolower($apellidos);
+
+        if (str_ends_with($lowerNombre, $lowerApellidos)) {
+            return $nombre;
+        }
+
+        return trim($nombre . ' ' . $apellidos);
     }
 }

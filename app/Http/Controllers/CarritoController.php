@@ -45,7 +45,7 @@ class CarritoController extends Controller
         }
 
         // Aplicar descuentos automáticos
-        $detallesConDescuento = $carrito->detalles->map(function ($detalle) {
+        $detallesConDescuento = $carrito->detalles->map(function ($detalle) use ($request) {
             $variante = $detalle->variante;
             $producto = $variante?->producto;
 
@@ -53,12 +53,13 @@ class CarritoController extends Controller
                 return null;
             }
 
+            $tipoCliente = $this->resolverTipoCliente($variante, $detalle, $request->user()->id);
             $descuentoMontoPersistido = (float) ($detalle->descuento ?? 0);
-            $precioUnitario = (float) $variante->precio_venta;
+            $precioBase = $this->obtenerPrecioBase($variante, $tipoCliente);
             $montoDescuento = $descuentoMontoPersistido > 0
                 ? $descuentoMontoPersistido
-                : (($precioUnitario * $this->promocionService->calcularDescuentoProducto($producto, 'minorista')) / 100);
-            $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
+                : (($precioBase * $this->promocionService->calcularDescuentoProducto($producto, $tipoCliente)) / 100);
+            $precioFinal = round(max(0, $precioBase - $montoDescuento), 2);
 
             return [
                 'id' => $detalle->id,
@@ -82,8 +83,8 @@ class CarritoController extends Controller
                     ->values(),
                 'cantidad' => $detalle->cantidad,
                 'precio_unitario' => $precioFinal,
-                'precio_original' => round($precioUnitario, 2),
-                'descuento_porcentaje' => $descuentoMontoPersistido > 0 ? round(($descuentoMontoPersistido / $precioUnitario) * 100, 2) : 0,
+                'precio_original' => round($precioBase, 2),
+                'descuento_porcentaje' => $descuentoMontoPersistido > 0 ? round(($descuentoMontoPersistido / max($precioBase, 1)) * 100, 2) : 0,
                 'descuento_monto' => round($montoDescuento, 2),
                 'precio_con_descuento' => $precioFinal,
                 'subtotal' => round($precioFinal * (int) $detalle->cantidad, 2),
@@ -129,8 +130,12 @@ class CarritoController extends Controller
             return back()->with('error', 'Debes seleccionar al menos una variante.');
         }
 
+        $totalCantidadMayorista = 0;
+        $tipoVenta = 'minorista';
+
         foreach ($items as $item) {
             $variante = ProductoVariante::with('producto')->find($item['producto_variante_id']);
+            $tipoVentaItem = strtoupper((string) ($item['tipo_venta'] ?? 'minorista'));
 
             if (!$variante) {
                 return back()->with('error', 'Una de las variantes seleccionadas no existe.');
@@ -145,6 +150,14 @@ class CarritoController extends Controller
                 continue;
             }
 
+            if ($tipoVentaItem === 'MAYORISTA') {
+                $totalCantidadMayorista += $cantidadSolicitada;
+            }
+
+            if ($tipoVentaItem === 'MAYORISTA') {
+                $tipoVenta = 'mayorista';
+            }
+
             $detalleExistente = CarritoDetalle::where('carrito_id', $carrito->id)
                 ->where('producto_variante_id', $variante->id)
                 ->first();
@@ -157,14 +170,17 @@ class CarritoController extends Controller
                 return back()->with('error', "Stock insuficiente para {$variante->producto->nombre} ({$variante->talla} / {$variante->color}).");
             }
 
+            $tipoCliente = $tipoVentaItem === 'MAYORISTA' ? 'mayorista' : 'minorista';
             $descuentoPorcentaje = $descuentoPorcentajeRequest !== null
                 ? (float) $descuentoPorcentajeRequest
                 : $this->promocionService->calcularDescuentoProducto(
                     $variante->producto,
-                    'minorista',
+                    $tipoCliente,
                     $promocionId ? (int) $promocionId : null
                 );
-            $precioUnitario = (float) $variante->precio_venta;
+
+            $precioBase = $this->obtenerPrecioBase($variante, $tipoCliente);
+            $precioUnitario = $precioBase;
             $montoDescuento = ($precioUnitario * $descuentoPorcentaje) / 100;
             $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
 
@@ -185,6 +201,12 @@ class CarritoController extends Controller
                 'descuento' => round($montoDescuento, 2),
             ]);
         }
+
+        if ($totalCantidadMayorista > 0 && $totalCantidadMayorista < 3) {
+            return back()->with('error', 'Para comprar por mayor debes seleccionar al menos 3 unidades en total.');
+        }
+
+        session()->put("carrito_tipo_venta.{$request->user()->id}", $tipoVenta);
 
         return back()->with('success', 'Productos agregados al carrito con éxito.');
     }
@@ -215,11 +237,11 @@ class CarritoController extends Controller
             return back()->with('error', 'Stock insuficiente');
         }
 
-        // Recalcular descuento
+        $tipoCliente = $this->resolverTipoCliente($variante, $carritoDetalle, $request->user()->id);
         $descuentoPorcentaje = $request->input('descuento_porcentaje') !== null
             ? (float) $request->input('descuento_porcentaje')
-            : $this->promocionService->calcularDescuentoProducto($variante->producto, 'minorista');
-        $precioUnitario = (float) $variante->precio_venta;
+            : $this->promocionService->calcularDescuentoProducto($variante->producto, $tipoCliente);
+        $precioUnitario = $this->obtenerPrecioBase($variante, $tipoCliente);
         $montoDescuento = ($precioUnitario * $descuentoPorcentaje) / 100;
         $precioFinal = round(max(0, $precioUnitario - $montoDescuento), 2);
 
@@ -258,6 +280,30 @@ class CarritoController extends Controller
     /**
      * Eliminar un item del carrito o vaciar completamente
      */
+    private function resolverTipoCliente(ProductoVariante $variante, $detalle, int $userId): string
+    {
+        $tipoClienteContexto = session()->get("carrito_tipo_venta.{$userId}", 'minorista');
+        if (in_array($tipoClienteContexto, ['minorista', 'mayorista'], true)) {
+            return $tipoClienteContexto;
+        }
+
+        $precioPersistido = (float) ($detalle->precio_unitario ?? 0);
+        $descuentoPersistido = (float) ($detalle->descuento ?? 0);
+        $precioBasePersistido = round($precioPersistido + $descuentoPersistido, 2);
+        $precioMayorista = (float) ($variante->precio_venta_mayorista ?? 0);
+
+        return $precioMayorista > 0 && abs($precioBasePersistido - $precioMayorista) <= 0.01
+            ? 'mayorista'
+            : 'minorista';
+    }
+
+    private function obtenerPrecioBase(ProductoVariante $variante, string $tipoCliente): float
+    {
+        return $tipoCliente === 'mayorista'
+            ? (float) ($variante->precio_venta_mayorista ?? $variante->precio_venta)
+            : (float) $variante->precio_venta;
+    }
+
     public function destroy(Request $request, $carritoDetalle)
     {
         // Caso especial: vaciar todo el carrito

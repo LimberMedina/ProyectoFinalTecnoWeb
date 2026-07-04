@@ -33,7 +33,7 @@ class SearchController extends Controller
         $isOwner = $user?->esPropietario() ?? false;
 
         // Búsqueda de productos
-        $productosQuery = Producto::with(['categoria', 'imagenes'])
+        $productosQuery = Producto::with(['categoria', 'imagenes', 'variantes'])
             ->where(function($q) use ($query) {
                 $q->where('nombre', 'ILIKE', "%{$query}%")
                   ->orWhere('codigo', 'ILIKE', "%{$query}%")
@@ -54,13 +54,18 @@ class SearchController extends Controller
             $imagen = $producto->imagenes->first();
             $imagenUrl = $mainImage ?: $imagen?->url;
 
+            // Prefer first variant for stock/price details
+            $variante = $producto->variantes->first();
+            $precio = $variante?->precio_venta ?? $producto->precio_venta_base ?? null;
+            $stock = $variante?->stock_actual ?? 0;
+
             return [
                 'id' => $producto->id,
                 'nombre' => $producto->nombre,
                 'codigo' => $producto->codigo,
                 'marca' => $producto->marca,
-                'precio' => $producto->precio_venta,
-                'stock' => $producto->stock_actual,
+                'precio' => $precio,
+                'stock' => $stock,
                 'activo' => $producto->estado,
                 'categoria' => $producto->categoria->nombre ?? 'N/A',
                 'categoria_id' => $producto->categoria_id,
@@ -68,6 +73,48 @@ class SearchController extends Controller
                 'imagen_url' => $imagenUrl ? (str_starts_with($imagenUrl, '/') ? $imagenUrl : '/storage/' . ltrim($imagenUrl, '/')) : null,
             ];
         });
+
+        // Si el usuario es cliente y no obtuvo resultados, intentar una búsqueda
+        // más permisiva (por ejemplo, sin forzar stock_actual > 0 o estado)
+        if (($user && $user->esCliente()) && $productos->isEmpty()) {
+            $productosFallbackQuery = Producto::with(['categoria', 'imagenes'])
+                ->where(function($q) use ($query) {
+                    $q->where('nombre', 'ILIKE', "%{$query}%")
+                      ->orWhere('codigo', 'ILIKE', "%{$query}%")
+                      ->orWhere('marca', 'ILIKE', "%{$query}%")
+                      ->orWhereHas('categoria', function($catQ) use ($query) {
+                          $catQ->where('nombre', 'ILIKE', "%{$query}%");
+                      });
+                });
+
+            $productosFallback = $productosFallbackQuery->with(['variantes'])->limit(10)->get()->map(function($producto) {
+                $mainImage = $producto->imagen ?? null;
+                $imagen = $producto->imagenes->first();
+                $imagenUrl = $mainImage ?: $imagen?->url;
+
+                $variante = $producto->variantes->first();
+                $precio = $variante?->precio_venta ?? $producto->precio_venta_base ?? null;
+                $stock = $variante?->stock_actual ?? 0;
+
+                return [
+                    'id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'codigo' => $producto->codigo,
+                    'marca' => $producto->marca,
+                    'precio' => $precio,
+                    'stock' => $stock,
+                    'activo' => $producto->estado,
+                    'categoria' => $producto->categoria->nombre ?? 'N/A',
+                    'categoria_id' => $producto->categoria_id,
+                    'imagen' => $imagenUrl,
+                    'imagen_url' => $imagenUrl ? (str_starts_with($imagenUrl, '/') ? $imagenUrl : '/storage/' . ltrim($imagenUrl, '/')) : null,
+                ];
+            });
+
+            if ($productosFallback->isNotEmpty()) {
+                $productos = $productosFallback;
+            }
+        }
 
         // Búsqueda de promociones activas
         $promocionesQuery = Promocion::where('estado', true)

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
+import QRCode from "qrcode";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import FlashNotification from "@/Components/FlashNotification.vue";
 
@@ -33,10 +34,37 @@ const handleImageChange = (event) => {
     imagenPreview.value = file ? URL.createObjectURL(file) : null;
 };
 
-const handleQrChange = (event) => {
-    const file = event.target.files?.[0] || null;
-    form.qr = file;
-    qrPreview.value = file ? URL.createObjectURL(file) : null;
+const generateQr = async () => {
+    const code = (form.codigo || "").trim();
+
+    if (!code) {
+        window.alert("Ingresa un código para generar el QR.");
+        return;
+    }
+
+    try {
+        const dataUrl = await QRCode.toDataURL(code, {
+            width: 320,
+            margin: 1,
+            color: {
+                dark: "#111827",
+                light: "#ffffff",
+            },
+        });
+
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        const fileName = `${code.replace(/[^a-zA-Z0-9._-]+/g, "_") || "producto"}-qr.png`;
+        const file = new File([blob], fileName, {
+            type: blob.type || "image/png",
+        });
+
+        form.qr = file;
+        qrPreview.value = dataUrl;
+    } catch (error) {
+        console.error("No se pudo generar el QR", error);
+        window.alert("No se pudo generar el QR. Intenta nuevamente.");
+    }
 };
 
 const submitForm = () => {
@@ -293,13 +321,17 @@ const submitForm = () => {
                                 class="mb-2 block text-sm font-semibold text-slate-700"
                                 >QR del producto</label
                             >
-                            <input
-                                id="qr"
-                                type="file"
-                                accept="image/*"
-                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-                                @change="handleQrChange"
-                            />
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                @click="generateQr"
+                            >
+                                <i class="bi bi-qr-code"></i>
+                                Generar QR
+                            </button>
+                            <p class="mt-2 text-sm text-slate-500">
+                                El QR se generará con el código del producto.
+                            </p>
                             <div v-if="qrPreview" class="mt-3">
                                 <img
                                     :src="qrPreview"

@@ -22,18 +22,35 @@ const currentLayout = computed(() =>
 const layoutProps = computed(() =>
     isOwnerOrSeller.value ? { title: "Mi perfil" } : {},
 );
-const displayName = computed(
-    () => user.value.name || user.value.nombre || "Usuario",
+const displayName = computed(() => {
+    const rawName = user.value?.nombre || user.value?.name || "";
+    const name = String(rawName).trim();
+
+    if (!name) {
+        return "Usuario";
+    }
+
+    return name.split(" ")[0];
+});
+const fallbackPhotoUrl = computed(
+    () =>
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value)}&background=10b981&color=ffffff`,
 );
 const profilePhotoUrl = computed(() => {
-    if (user.value.profile_photo_path) {
+    if (user.value?.profile_photo_path) {
         return `/storage/${user.value.profile_photo_path}`;
     }
-    if (user.value.profile_photo_url) {
+
+    if (user.value?.profile_photo_url) {
         return user.value.profile_photo_url;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value)}&background=10b981&color=ffffff`;
+
+    return fallbackPhotoUrl.value;
 });
+
+const handlePhotoError = (event) => {
+    event.target.src = fallbackPhotoUrl.value;
+};
 
 const formatDate = (value) => {
     if (!value) return "No registrada";
@@ -153,8 +170,9 @@ const accountFields = computed(() => [
                                 >
                                     <img
                                         :src="profilePhotoUrl"
-                                        :alt="displayName"
+                                        :alt="`Foto de perfil de ${displayName}`"
                                         class="h-28 w-28 rounded-full object-cover ring-4 ring-white"
+                                        @error="handlePhotoError"
                                     />
                                 </div>
                                 <h2

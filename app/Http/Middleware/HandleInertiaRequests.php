@@ -37,6 +37,9 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $profilePhotoPath = $user?->profile_photo_path;
+        $profilePhotoUrl = $user?->profile_photo_url
+            ?: ($profilePhotoPath ? '/storage/' . ltrim($profilePhotoPath, '/') : null);
 
         return array_merge(parent::share($request), [
             'auth' => [
@@ -49,9 +52,8 @@ class HandleInertiaRequests extends Middleware
                             'nombre' => $user->role->nombre,
                         ] : null,
                         'roles' => $user->role ? [$user->role->nombre] : [],
-                        'profile_photo_url' => $user->profile_photo_path
-                            ? '/storage/' . ltrim($user->profile_photo_path, '/')
-                            : null,
+                        'profile_photo_path' => $profilePhotoPath,
+                        'profile_photo_url' => $profilePhotoUrl,
                         'theme' => $user->theme ?? '',
                         'mode' => $user->mode ?? 'dia',
                         'font_size' => $user->font_size ?? 'normal',
